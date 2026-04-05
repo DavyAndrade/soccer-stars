@@ -245,22 +245,38 @@ Para cada minuto (1 até 90 + acréscimos):
 
 ### 3. Sistema de Liga
 
-#### Estrutura
-- **Quantidade de Times**: 12 times
-- **Formato**: Ida e volta (todos contra todos)
-- **Total de Rodadas**: 22 rodadas (11 ida + 11 volta)
-- **Total de Partidas por Time**: 22 partidas
+#### Estrutura - Prince Takamado JFA U-18 Football Premier League
+
+**Baseado na liga real japonesa de futebol sub-18**
+
+##### Divisão em Conferências
+- **EAST**: Times de Hokkaido, Tohoku, Kanto e Chubu (12 times)
+- **WEST**: Times de Kansai, Chugoku, Shikoku, Kyuushuu e Okinawa (12 times)
+
+##### Formato de Competição
+- **Times por Conferência**: 12 times (EAST) + 12 times (WEST) = 24 times total
+- **Fase Regular**: Cada conferência joga ida e volta (todos contra todos dentro da conferência)
+  - Total de rodadas por conferência: 22 rodadas (11 ida + 11 volta)
+  - Total de partidas por time: 22 partidas
+- **Final**: Jogo decisivo entre 1º lugar EAST vs 1º lugar WEST
+  - Define o campeão geral da liga
+
+##### Tipos de Times
+- **Times Escolares**: Equipes de escolas/colégios
+- **Times de Base**: Equipes de formação de clubes profissionais
+- Ambos competem na mesma liga
 
 #### Formações dos Times
 - **Formações Disponíveis**: 4-3-3, 4-4-2, 4-2-3-1, 3-5-2, 4-5-1, 3-4-3
 - **Regra**: Cada time tem formação **fixa** (não muda entre partidas)
 
 #### Elencos
-- **Quantidade de NPCs**: **Variada por time** (a definir)
-- **Nomes**: **Nomes próprios** (não genéricos)
-- **Números de Camisa**: Únicos dentro de cada time
+- **Quantidade de NPCs**: **23 jogadores por time** (padrão de futebol)
+- **Nomes**: **Genéricos** (gerados proceduralmente ou lista simples)
+- **Números de Camisa**: 1-99, únicos dentro de cada time
+- **Posições**: Distribuídas realisticamente (3-4 GK, 6-8 DF, 6-8 MF, 4-6 FW)
 
-#### Classificação
+#### Classificação (Por Conferência)
 - **Vitória**: 3 pontos
 - **Empate**: 1 ponto
 - **Derrota**: 0 pontos
@@ -269,6 +285,11 @@ Para cada minuto (1 até 90 + acréscimos):
   2. Saldo de gols
   3. Gols marcados
   4. Confronto direto
+  
+#### Progressão do Protagonista
+- O jogador criado entra em um time de uma das conferências (EAST ou WEST)
+- Disputa a fase regular (22 partidas)
+- Se seu time ficar em 1º lugar, disputa a FINAL contra o 1º da outra conferência
 
 ---
 
@@ -390,11 +411,15 @@ SoccerStars/
 ## 📋 Perguntas Pendentes / Decisões Futuras
 
 ### Times da Liga
-- [ ] Definir nomes dos 12 times
-- [ ] Definir cores/uniformes
-- [ ] Definir formações fixas de cada time
-- [ ] Decidir quantidade exata de NPCs por time
-- [ ] Criar nomes dos NPCs (personalizados ou genéricos?)
+- [x] **Estrutura Definida**: Prince Takamado JFA U-18 Premier League (EAST + WEST)
+- [x] **Quantidade de Times**: 24 times (12 EAST + 12 WEST)
+- [x] **NPCs por Time**: 23 jogadores (padrão de futebol)
+- [x] **Nomes de NPCs**: Genéricos (gerados proceduralmente)
+- [ ] Selecionar 12 times reais para EAST (Hokkaido, Tohoku, Kanto, Chubu)
+- [ ] Selecionar 12 times reais para WEST (Kansai, Chugoku, Shikoku, Kyuushuu, Okinawa)
+- [ ] Definir cores/uniformes de cada time
+- [ ] Definir formações fixas de cada time (4-3-3, 4-4-2, etc.)
+- [ ] Implementar gerador de nomes genéricos para NPCs
 
 ### Evolução (Pós-MVP)
 - [ ] Sistema de level up e ganho de XP

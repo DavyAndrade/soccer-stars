@@ -337,16 +337,23 @@ bun add -d <pkg>  # Dependência dev
 6. Phaser Scene de partida (`game/scenes/partida-scene.ts`)
 
 ### Decisões Técnicas
-- **Liga**: 12 times (ida e volta = 22 rodadas)
-- **NPCs**: Nomes próprios (times/elencos a definir)
+- **Liga**: Prince Takamado JFA U-18 Premier League (EAST + WEST)
+  - 24 times total (12 EAST + 12 WEST)
+  - EAST: Hokkaido, Tohoku, Kanto, Chubu
+  - WEST: Kansai, Chugoku, Shikoku, Kyuushuu, Okinawa
+  - 22 partidas por time (ida e volta dentro da conferência)
+  - Final: 1º EAST vs 1º WEST
+- **Times**: Baseados em times reais japoneses (escolares + times de base)
+- **NPCs**: 23 jogadores por time, nomes genéricos
 - **Avatar**: Upload 10MB max, múltiplos formatos
-- **Número de Camisa**: Aleatório dentre disponíveis
+- **Número de Camisa**: 1-99, aleatório dentre disponíveis
 
 ### Perguntas Pendentes
-- Nomes, cores e formações dos 12 times?
-- Quantidade de NPCs por elenco?
-- Nomes dos NPCs (genéricos ou personalizados)?
+- Selecionar 12 times EAST e 12 WEST da liga real?
+- Cores/uniformes dos times?
+- Formações fixas para cada time?
 - Redimensionamento de avatar (ex: 200x200px)?
+- Gerador de nomes genéricos para 23 NPCs por time?
 
 ---
 
