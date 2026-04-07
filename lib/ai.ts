@@ -26,10 +26,10 @@ interface PesosAcao {
  * Calcula o peso para a ação "chute" baseado no contexto
  * 
  * Regras:
- * - Chute só é permitido em MI2 (d20 + chute) ou DF2 (d20 apenas)
+ * - Chute só é permitido em MI2 ou DF2
  * - Peso aumenta quando NPC está perdendo
  * - Peso aumenta drasticamente nos últimos minutos perdendo
- * - Atributo de chute influencia diretamente
+ * - Novo sistema: Chute usa POTÊNCIA
  */
 export function calcularPesoChute(
   contexto: ContextoPartida,
@@ -42,7 +42,7 @@ export function calcularPesoChute(
     return 0;
   }
 
-  let peso = atributos.chute * 3; // Base: atributo x3 (maior prioridade)
+  let peso = atributos.potencia * 3; // Base: potência x3 (chute usa potência)
 
   // Modificador de placar
   const diferencaPlacar = placarOponente - placarNPC;
@@ -78,7 +78,7 @@ export function calcularPesoDrible(
 ): number {
   const { energia } = contexto;
 
-  let peso = atributos.drible * 2; // Base: atributo x2
+  let peso = atributos.rapidez * 2; // Base: rapidez x2 (drible usa rapidez)
 
   // Modificador de energia
   if (energia === 0) {
@@ -110,7 +110,7 @@ export function calcularPesoPasse(
 ): number {
   const { energia, placarNPC, placarOponente } = contexto;
 
-  let peso = atributos.passe * 2; // Base: atributo x2
+  let peso = atributos.tecnica * 2; // Base: técnica x2 (passe usa técnica)
 
   // Modificador de energia (conservar quando baixa)
   if (energia <= 2) {

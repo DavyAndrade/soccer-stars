@@ -9,22 +9,15 @@ export type PlayerPosition =
   | 'FW'; // Atacante (Forward)
 
 export interface PlayerAttributes {
-  // Atributos Ofensivos (min: 1, max: 5)
-  chute: number;
-  drible: number;
-  passe: number;
-  
-  // Atributos Defensivos (min: 1, max: 5)
-  bloqueio: number;
-  desarme: number;
-  interceptacao: number;
+  // Sistema universal de 3 atributos (min: 1, max: 5)
+  // Todos os jogadores (incluindo GK) usam estes atributos
+  potencia: number;  // Chute (ataque) + Bloqueio (defesa)
+  rapidez: number;   // Drible (ataque) + Desarme (defesa)
+  tecnica: number;   // Passe (ataque) + Interceptação (defesa)
 }
 
-export interface GoalkeeperAttributes {
-  // Atributos exclusivos do Goleiro (total: 6 pontos)
-  captura: number;
-  espalme: number;
-}
+// Tipo específico para ações do goleiro (não é um atributo, é uma escolha durante defesa)
+export type GoalkeeperAction = 'captura' | 'espalme';
 
 export interface Player {
   id: string;
@@ -39,18 +32,13 @@ export interface Player {
   avatarUrl?: string; // Imagem escolhida pelo jogador (protagonista)
 }
 
-export interface Goalkeeper {
-  id: string;
-  nome: string;
-  numero: number;
-  atributos: GoalkeeperAttributes;
-  timeId: string;
-}
+// Goleiro agora usa mesma interface Player (atributos universais)
+// Removido interface Goalkeeper separada
 
-// Constantes de atributos
-export const TOTAL_PONTOS_ATRIBUTOS = 18;
-export const PONTOS_OBRIGATORIOS = 6; // 1 em cada atributo (obrigatório)
-export const PONTOS_LIVRES = 12; // 18 - 6 = 12 pontos para distribuir livremente
+// Constantes de atributos (novo sistema - 3 atributos)
+export const TOTAL_PONTOS_ATRIBUTOS = 9;
+export const PONTOS_OBRIGATORIOS = 3; // 1 em cada atributo (obrigatório)
+export const PONTOS_LIVRES = 6; // 9 - 3 = 6 pontos para distribuir livremente
 export const MIN_ATRIBUTO = 1;
 export const MAX_ATRIBUTO = 5;
 

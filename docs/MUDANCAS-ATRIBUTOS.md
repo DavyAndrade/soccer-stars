@@ -44,32 +44,36 @@
 
 ---
 
-## 🤔 Perguntas Pendentes
+## ✅ Especificação Completa (07/04/2026)
 
 ### Distribuição de Pontos
-- [ ] Total de pontos para distribuir? (manter 18 ou mudar?)
-- [ ] Pontos obrigatórios? (ex: 1 em cada = 3 pontos obrigatórios)
-- [ ] Pontos livres? (ex: 15 livres se total = 18)
-- [ ] Min/Max por atributo? (manter 1-5 ou mudar?)
+- [x] **Total de pontos**: 9 pontos para distribuir
+- [x] **Pontos obrigatórios**: Mínimo 1 em cada atributo (3 pontos obrigatórios)
+- [x] **Pontos livres**: 6 pontos livres para distribuir
+- [x] **Min/Max por atributo**: Mínimo 1, Máximo 5
 
 ### Mapeamento Ação → Atributo
-- [ ] **Chute** usa qual atributo? (Potência? Técnica?)
-- [ ] **Drible** usa qual atributo? (Rapidez? Técnica?)
-- [ ] **Passe** usa qual atributo? (Técnica? Potência?)
-- [ ] **Bloqueio** (defesa de chute) usa qual? (Potência?)
-- [ ] **Desarme** (defesa de drible) usa qual? (Rapidez?)
-- [ ] **Interceptação** (defesa de passe) usa qual? (Rapidez? Técnica?)
+- [x] **Chute** → **Potência**
+- [x] **Drible** → **Rapidez**
+- [x] **Passe** → **Técnica**
+- [x] **Bloqueio** (defesa de chute) → **Potência**
+- [x] **Desarme** (defesa de drible) → **Rapidez**
+- [x] **Interceptação** (defesa de passe) → **Técnica**
 
 ### Goleiro
-- [ ] Goleiro mantém atributos separados (Captura/Espalme)?
-- [ ] Ou goleiro também usa Potência/Rapidez/Técnica?
-- [ ] Se separado, quantos pontos totais?
+- [x] **Goleiro usa os mesmos 3 atributos** (Potência, Rapidez, Técnica)
+- [x] **Mesma distribuição**: 9 pontos totais (min 1, max 5)
+- [x] **Mecânica especial de defesa**:
+  - **Escolha aleatória** entre Captura ou Espalme (rolagem ou 50/50)
+  - **Espalme**: `d20 + floor((Potência + Rapidez) / 2)`
+  - **Captura**: `d20 + floor((Potência + Técnica) / 2)`
+  - **Arredondamento**: Sempre para baixo (floor)
 
 ---
 
-## 💡 Sugestões de Mapeamento (Aguardando Confirmação)
+## ✅ Mapeamento Confirmado (Opção A: Mapeamento Direto)
 
-### Opção A: Mapeamento Direto
+### Jogadores de Campo
 ```
 Ofensivo:
 - Chute → Potência
@@ -82,42 +86,33 @@ Defensivo:
 - Interceptação → Técnica
 ```
 
-### Opção B: Mapeamento Combinado
+### Goleiro (Mecânica Especial)
 ```
-Ofensivo:
-- Chute → Potência + Técnica (média)
-- Drible → Rapidez + Técnica (média)
-- Passe → Técnica + Rapidez (média)
-
-Defensivo:
-- Bloqueio → Potência
-- Desarme → Rapidez  
-- Interceptação → Técnica
+1. Sistema sorteia aleatoriamente: Captura ou Espalme
+2. Cálculo de defesa:
+   - Se Espalme: d20 + floor((Potência + Rapidez) / 2)
+   - Se Captura: d20 + floor((Potência + Técnica) / 2)
+3. Comparar com rolagem do atacante
 ```
 
-### Opção C: Mapeamento Flexível
-```
-Cada ação tem atributo primário + secundário
+**Exemplo de Goleiro**:
+- Potência: 3
+- Rapidez: 2
+- Técnica: 4
 
-Chute:
-  - MI2: Técnica (primário)
-  - DF2: Potência (primário)
-  
-Drible: Rapidez (primário) + Técnica (secundário)
-Passe: Técnica (primário) + Rapidez (secundário)
-Bloqueio: Potência (primário)
-Desarme: Rapidez (primário)
-Interceptação: Técnica (primário)
-```
+Se escolher **Espalme**: `d20 + floor((3 + 2) / 2)` = `d20 + 2`  
+Se escolher **Captura**: `d20 + floor((3 + 4) / 2)` = `d20 + 3`
 
 ---
 
 ## 🚧 Status de Implementação
 
 **Atual**: Sistema antigo (6 atributos) está IMPLEMENTADO e TESTADO  
-**Próximo**: Aguardando especificação completa para refatorar
+**Próximo**: ✅ **ESPECIFICAÇÃO COMPLETA RECEBIDA** - Pronto para refatorar
 
 **Impacto**: Refatoração de ~8 arquivos + todos os testes relacionados
+
+**Decisão**: 07/04/2026 - Migração para 3 atributos confirmada
 
 ---
 
@@ -133,4 +128,4 @@ Interceptação: Técnica (primário)
 
 ---
 
-**Aguardando especificação detalhada do usuário! 🎯**
+**✅ Especificação recebida e documentada! Pronto para implementação. 🎯**

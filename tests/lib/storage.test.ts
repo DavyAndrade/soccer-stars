@@ -6,7 +6,7 @@ import {
   loadLeagueData,
   clearAllData,
   STORAGE_KEYS 
-} from './storage';
+} from '@/lib/storage';
 
 // Mock do localStorage
 const localStorageMock = (() => {
@@ -41,7 +41,7 @@ describe('storage-layer', () => {
         nome: 'Ashito Aoi',
         posicao: 'FW' as const,
         atributos: {
-          chute: 5,
+          potencia: 5,
           drible: 5,
           passe: 5,
           bloqueio: 1,
@@ -100,12 +100,9 @@ describe('storage-layer', () => {
         nome: 'Ashito Aoi',
         posicao: 'FW' as const,
         atributos: {
-          chute: 5,
-          drible: 5,
-          passe: 5,
-          bloqueio: 1,
-          desarme: 1,
-          interceptacao: 1,
+          potencia: 5,
+          rapidez: 3,
+          tecnica: 1,
         },
       };
 

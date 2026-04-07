@@ -48,28 +48,28 @@ mkdir -p app/criar-jogador app/partida app/liga
 - **NPCs**: 23 jogadores por time, nomes genéricos
 - **Atributos**: Mudança planejada de 6 → 3 (Potência/Rapidez/Técnica)
 
-### ⏳ Aguardando Resposta:
+### ✅ Decisões Confirmadas (07/04/2026):
 
 #### 1. Estilo Visual do Campo
-- [ ] Retângulos coloridos simples (MVP, mais rápido)
-- [ ] Assets gráficos customizados
+- [x] **Retângulos coloridos simples** (MVP, mais rápido)
 
 #### 2. Sprites dos Jogadores
-- [ ] Círculos coloridos (verde = protagonista, vermelho = adversário)
-- [ ] Sprites de jogadores importados
+- [x] **Círculos coloridos baseados nas cores do uniforme do time**
+  - Verde = protagonista
+  - Outras cores = baseado no uniforme do time adversário
+  - ⚠️ Feature pode ter alterações futuras dependendo da implementação do game
 
 #### 3. Ordem de Implementação
-- [ ] Começar por criação de jogador (React, mais simples)
-- [ ] Começar por Phaser (game engine, mais complexo)
+- [x] **Começar por criação de jogador** (React, mais simples)
 
 #### 4. Package Manager
-- [ ] Instalar Bun (`curl -fsSL https://bun.sh/install | bash`)
-- [ ] Continuar com npm/pnpm (mais lento mas funciona)
+- [x] **Bun instalado e verificado** (v1.3.11 ✅)
 
-#### 5. Sistema de Atributos (detalhes)
-- [ ] Distribuição de pontos (total, obrigatório, livre, min/max)
-- [ ] Mapeamento ação → atributo (ver `docs/MUDANCAS-ATRIBUTOS.md`)
-- [ ] Goleiro usa sistema separado ou igual?
+#### 5. Sistema de Atributos
+- [x] **Migração para 3 atributos confirmada** (ver `docs/MUDANCAS-ATRIBUTOS.md`)
+  - Potência, Rapidez, Técnica
+  - 9 pontos totais (min 1, max 5)
+  - GK usa mesmo sistema com mecânica especial
 
 ---
 

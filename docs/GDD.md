@@ -52,31 +52,33 @@ Defensor: d20 + Atributo Defensivo
 
 ### 2. Atributos
 
-#### Jogador de Campo (6 atributos)
-| Atributo      | Descrição |
-|---------------|-----------|
-| **Chute**     | Força e precisão dos chutes ao gol |
-| **Drible**    | Habilidade de avançar com a bola |
-| **Passe**     | Precisão e alcance dos passes |
-| **Bloqueio**  | Defesa contra chutes |
-| **Desarme**   | Defesa contra dribles |
-| **Interceptação** | Defesa contra passes |
+#### Sistema Universal (3 atributos para TODOS os jogadores)
+| Atributo      | Descrição | Ações Associadas |
+|---------------|-----------|------------------|
+| **Potência**  | Força física e impacto | Chute (ataque), Bloqueio (defesa) |
+| **Rapidez**   | Velocidade e agilidade | Drible (ataque), Desarme (defesa) |
+| **Técnica**   | Habilidade e precisão | Passe (ataque), Interceptação (defesa) |
 
-**Distribuição de Pontos:**
-- **Obrigatório**: 1 ponto em cada atributo (6 pontos total)
-- **Livres**: 12 pontos para distribuir livremente
-- **Total**: 18 pontos
+**Distribuição de Pontos (Todos os Jogadores):**
+- **Obrigatório**: 1 ponto em cada atributo (3 pontos total)
+- **Livres**: 6 pontos para distribuir livremente
+- **Total**: 9 pontos
 - **Limites**: Mínimo 1, Máximo 5 por atributo
 
-#### Goleiro (2 atributos)
-| Atributo    | Descrição |
-|-------------|-----------|
-| **Captura** | Defende e mantém a posse (pode passar para zona MI) |
-| **Espalme** | Defende mas a bola sobra 50/50 para qualquer time |
+#### Goleiro (Mecânica Especial)
+**Atributos**: Mesmos 3 atributos (Potência, Rapidez, Técnica)
 
-**Distribuição de Pontos:**
-- **Total**: 6 pontos
-- **Limites**: Mínimo 1, Máximo 5 por atributo
+**Mecânica de Defesa:**
+1. Sistema escolhe aleatoriamente: **Captura** ou **Espalme**
+2. **Espalme**: `d20 + floor((Potência + Rapidez) / 2)` → Bola sobra 50/50
+3. **Captura**: `d20 + floor((Potência + Técnica) / 2)` → Mantém posse, pode passar para MI
+
+**Arredondamento**: Sempre para baixo (floor)
+
+**Exemplo**:
+- GK com Potência 3, Rapidez 2, Técnica 4
+- Se Espalme: `d20 + floor(5/2)` = `d20 + 2`
+- Se Captura: `d20 + floor(7/2)` = `d20 + 3`
 
 ---
 

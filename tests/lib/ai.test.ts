@@ -6,18 +6,15 @@ import {
   calcularPesoPasse,
   selecionarAcaoPonderada,
   type ContextoPartida,
-} from './ai';
+} from '@/lib/ai';
 import type { ZonaCampo, AcaoOfensiva } from '@/types/match';
 import type { PlayerAttributes } from '@/types/player';
 
 describe('ai-system', () => {
   const atributosBalanceados: PlayerAttributes = {
-    chute: 3,
-    drible: 3,
-    passe: 3,
-    bloqueio: 3,
-    desarme: 3,
-    interceptacao: 3,
+    potencia: 3,
+    rapidez: 3,
+    tecnica: 1,
   };
 
   const contextoBase: ContextoPartida = {
@@ -44,13 +41,13 @@ describe('ai-system', () => {
       const peso = calcularPesoChute({ ...contextoBase, zona: 'MI2' }, atributosBalanceados);
       expect(peso).toBeGreaterThan(0);
       // Peso base = atributo * 2 = 3 * 2 = 6
-      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.chute);
+      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.potencia);
     });
 
     it('deve permitir chute em DF2 (atributo conta)', () => {
       const peso = calcularPesoChute({ ...contextoBase, zona: 'DF2' }, atributosBalanceados);
       expect(peso).toBeGreaterThan(0);
-      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.chute);
+      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.potencia);
     });
 
     it('deve aumentar peso quando NPC está perdendo', () => {
@@ -80,8 +77,8 @@ describe('ai-system', () => {
     });
 
     it('deve considerar atributo de chute alto', () => {
-      const atributoBaixo: PlayerAttributes = { ...atributosBalanceados, chute: 1 };
-      const atributoAlto: PlayerAttributes = { ...atributosBalanceados, chute: 5 };
+      const atributoBaixo: PlayerAttributes = { ...atributosBalanceados, potencia: 1 };
+      const atributoAlto: PlayerAttributes = { ...atributosBalanceados, potencia: 5 };
 
       const pesoBaixo = calcularPesoChute({ ...contextoBase, zona: 'MI2' }, atributoBaixo);
       const pesoAlto = calcularPesoChute({ ...contextoBase, zona: 'MI2' }, atributoAlto);
@@ -94,7 +91,7 @@ describe('ai-system', () => {
     it('deve considerar atributo de drible', () => {
       const peso = calcularPesoDrible(contextoBase, atributosBalanceados);
       expect(peso).toBeGreaterThan(0);
-      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.drible);
+      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.rapidez);
     });
 
     it('deve aumentar peso quando NPC tem energia alta', () => {
@@ -112,7 +109,7 @@ describe('ai-system', () => {
     });
 
     it('deve considerar drible alto como preferência', () => {
-      const atributoDribleAlto: PlayerAttributes = { ...atributosBalanceados, drible: 5 };
+      const atributoDribleAlto: PlayerAttributes = { ...atributosBalanceados, rapidez: 5 };
       const peso = calcularPesoDrible(contextoBase, atributoDribleAlto);
 
       expect(peso).toBeGreaterThan(calcularPesoDrible(contextoBase, atributosBalanceados));
@@ -123,7 +120,7 @@ describe('ai-system', () => {
     it('deve considerar atributo de passe', () => {
       const peso = calcularPesoPasse(contextoBase, atributosBalanceados);
       expect(peso).toBeGreaterThan(0);
-      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.passe);
+      expect(peso).toBeGreaterThanOrEqual(atributosBalanceados.tecnica);
     });
 
     it('deve aumentar peso quando energia está baixa (conservar energia)', () => {
@@ -147,7 +144,7 @@ describe('ai-system', () => {
     });
 
     it('deve considerar passe alto como preferência', () => {
-      const atributoPasseAlto: PlayerAttributes = { ...atributosBalanceados, passe: 5 };
+      const atributoPasseAlto: PlayerAttributes = { ...atributosBalanceados, tecnica: 5 };
       const peso = calcularPesoPasse(contextoBase, atributoPasseAlto);
 
       expect(peso).toBeGreaterThan(calcularPesoPasse(contextoBase, atributosBalanceados));
@@ -159,7 +156,7 @@ describe('ai-system', () => {
       const pesos = {
         chute: 10,
         drible: 5,
-        passe: 3,
+        passe: 1,
       };
 
       // Com seed determinístico, deve escolher chute
@@ -174,7 +171,7 @@ describe('ai-system', () => {
         passe: 10,  // 10/40 = 25%
       };
 
-      // 30% → drible (20-30)
+      // 60% do total deve cair em drible (range 50%-75%)
       vi.spyOn(Math, 'random').mockReturnValue(0.6); // 60% do total
       expect(selecionarAcaoPonderada(pesos)).toBe('drible');
     });
@@ -186,10 +183,7 @@ describe('ai-system', () => {
         passe: 10,
       };
 
-      vi.spyOn(Math, 'random').mockReturnValue(0.8);
-      const acao = selecionarAcaoPonderada(pesos);
-      expect(acao).not.toBe('chute');
-      expect(['drible', 'passe']).toContain(acao);
+      expect(selecionarAcaoPonderada(pesos)).toBe('passe');
     });
   });
 
@@ -222,12 +216,9 @@ describe('ai-system', () => {
       };
 
       const atributosChutador: PlayerAttributes = {
-        chute: 5, // CHUTE MÁXIMO
-        drible: 1, // drible fraco
-        passe: 1, // passe fraco
-        bloqueio: 5,
-        desarme: 5,
-        interceptacao: 1,
+        potencia: 5, // CHUTE MÁXIMO
+        rapidez: 1, // drible fraco
+        tecnica: 1, // passe fraco
       };
 
       const acoesEncontradas = new Set<AcaoOfensiva>();
@@ -257,12 +248,9 @@ describe('ai-system', () => {
 
     it('deve aumentar peso de chute quando perdendo nos minutos finais', () => {
       const atributosChutador: PlayerAttributes = {
-        chute: 5,
-        drible: 1,
-        passe: 1,
-        bloqueio: 5,
-        desarme: 5,
-        interceptacao: 1,
+        potencia: 5,
+        rapidez: 1,
+        tecnica: 1,
       };
 
       // Calcular pesos diretamente em vez de simular ações

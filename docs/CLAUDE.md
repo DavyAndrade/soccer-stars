@@ -94,10 +94,11 @@ Exemplos proibidos:
 - **Mapeamento**: Chute → Bloqueio | Drible → Desarme | Passe → Interceptação
 
 ### Atributos
-- **Jogadores**: 6 atributos (Chute, Drible, Passe, Bloqueio, Desarme, Interceptação)
-- **Distribuição**: 1 ponto obrigatório em cada (6 pontos) + 12 pontos livres = 18 total
+- **Jogadores**: 3 atributos (Potência, Rapidez, Técnica)
+- **Distribuição**: 1 ponto obrigatório em cada (3 pontos) + 6 pontos livres = 9 total
 - **Limites**: Min 1, Max 5 por atributo
-- **Goleiros**: Apenas Captura e Espalme (6 pontos totais)
+- **Mapeamento**: Potência (Chute/Bloqueio), Rapidez (Drible/Desarme), Técnica (Passe/Interceptação)
+- **Goleiros**: Mesmos 3 atributos com mecânica especial (Captura/Espalme calculados)
 
 ### Energia
 - **Máximo**: 10 pontos
@@ -177,7 +178,7 @@ DF1 ← MI1 ← MC → MI2 → DF2
 - **Fallback**: Se dados corrompidos, resetar para estado inicial.
 
 ### Validação de Entrada
-- Sempre validar distribuição de atributos (total = 18, min = 1, max = 5).
+- Sempre validar distribuição de atributos (total = 9, min = 1, max = 5).
 - Validar upload de avatar (tamanho ≤ 10MB, formatos aceitos).
 - Validar número de camisa (único dentro do time).
 
@@ -274,15 +275,17 @@ Ao trabalhar em um problema específico:
 - ⏳ **Próximo**: Schemas Zod, stores Zustand, lógica de combate, UI de criação de jogador
 
 ### Decisões Técnicas
-- **12 times na liga** (ida e volta)
-- **NPCs com nomes próprios** (times e elencos a serem definidos)
+- **12 times na liga por conferência** (EAST + WEST, 24 times totais)
+- **NPCs com nomes genéricos** (23 jogadores por elenco)
 - **Avatar**: Upload de imagem, máx 10MB, múltiplos formatos aceitos
 - **Número de camisa**: Aleatório dentre os disponíveis no time
+- **Sistema de Atributos**: 3 atributos (Potência, Rapidez, Técnica) - 9 pontos totais
+- **Sprites**: Círculos coloridos baseados em uniforme (verde = protagonista)
+- **Campo**: Retângulos coloridos simples (MVP)
 
 ### Perguntas Pendentes
-- Nomes, cores e formações dos 12 times?
-- Quantidade de NPCs por elenco (23 jogadores padrão)?
-- Nomes dos NPCs (genéricos ou personalizados)?
+- Nomes e cores específicas dos 12 times por conferência (EAST/WEST)?
+- Implementação do gerador de nomes genéricos para NPCs?
 - Redimensionamento automático de avatar (ex: 200x200px)?
 
 ---

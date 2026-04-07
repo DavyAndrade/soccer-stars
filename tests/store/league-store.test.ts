@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useLeagueStore, selectClassificacao, selectProximaPartida } from './league-store';
+import { useLeagueStore, selectClassificacao, selectProximaPartida } from '@/store/league-store';
 
 describe('league-store', () => {
   beforeEach(() => {

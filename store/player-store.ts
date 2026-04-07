@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { PlayerPosition, PlayerAttributes, GoalkeeperAttributes } from '@/types/player';
+import type { PlayerPosition, PlayerAttributes } from '@/types/player';
 
 /**
  * Estado do jogador protagonista
@@ -8,7 +8,7 @@ interface PlayerState {
   // Dados do jogador
   nome: string;
   posicao: PlayerPosition | null;
-  atributos: PlayerAttributes | GoalkeeperAttributes | null;
+  atributos: PlayerAttributes | null; // Agora todos usam PlayerAttributes
   avatar?: string;
   time: string | null;
   numeroCamisa: number | null;
@@ -16,7 +16,7 @@ interface PlayerState {
   // Actions
   setNome: (nome: string) => void;
   setPosicao: (posicao: PlayerPosition) => void;
-  setAtributos: (atributos: PlayerAttributes | GoalkeeperAttributes) => void;
+  setAtributos: (atributos: PlayerAttributes) => void;
   setAvatar: (avatar: string | undefined) => void;
   setTime: (time: string) => void;
   setNumeroCamisa: (numero: number) => void;

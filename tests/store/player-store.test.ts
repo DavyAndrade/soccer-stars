@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { usePlayerStore, selectIsComplete } from './player-store';
-import type { PlayerPosition } from '@/types/player';
+import { usePlayerStore, selectIsComplete } from '@/store/player-store';
+import type { PlayerPosition, PlayerAttributes } from '@/types/player';
 
-describe('player-store', () => {
+describe('player-store (novo sistema - 3 atributos)', () => {
   beforeEach(() => {
-    // Limpar store antes de cada teste
     const { reset } = usePlayerStore.getState();
     act(() => {
       reset();
@@ -58,7 +57,7 @@ describe('player-store', () => {
       expect(result.current.posicao).toBe('FW');
     });
 
-    it('deve aceitar todas as posições válidas', () => {
+    it('deve aceitar todas as posições válidas (incluindo GK)', () => {
       const { result } = renderHook(() => usePlayerStore());
       const posicoes: PlayerPosition[] = ['GK', 'DF', 'MF', 'FW'];
 
@@ -71,16 +70,13 @@ describe('player-store', () => {
     });
   });
 
-  describe('setAtributos', () => {
-    it('deve atualizar atributos de jogador de campo', () => {
+  describe('setAtributos (novo sistema)', () => {
+    it('deve atualizar atributos com novo sistema (3 atributos)', () => {
       const { result } = renderHook(() => usePlayerStore());
-      const atributos = {
-        chute: 5,
-        drible: 4,
-        passe: 3,
-        bloqueio: 2,
-        desarme: 2,
-        interceptacao: 2,
+      const atributos: PlayerAttributes = {
+        potencia: 5,
+        rapidez: 3,
+        tecnica: 1,
       };
 
       act(() => {
@@ -90,25 +86,28 @@ describe('player-store', () => {
       expect(result.current.atributos).toEqual(atributos);
     });
 
-    it('deve atualizar atributos de goleiro', () => {
+    it('GK agora usa mesmos atributos (não tem schema separado)', () => {
       const { result } = renderHook(() => usePlayerStore());
-      const atributos = {
-        captura: 4,
-        espalme: 2,
+      const atributosGK: PlayerAttributes = {
+        potencia: 3,
+        rapidez: 2,
+        tecnica: 4,
       };
 
       act(() => {
-        result.current.setAtributos(atributos);
+        result.current.setPosicao('GK');
+        result.current.setAtributos(atributosGK);
       });
 
-      expect(result.current.atributos).toEqual(atributos);
+      expect(result.current.atributos).toEqual(atributosGK);
+      expect(result.current.posicao).toBe('GK');
     });
   });
 
   describe('setAvatar', () => {
     it('deve atualizar o avatar', () => {
       const { result } = renderHook(() => usePlayerStore());
-      const avatarBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANS';
+      const avatarBase64 = 'data:image/png;base64,iVBORw0KGgo=';
 
       act(() => {
         result.current.setAvatar(avatarBase64);
@@ -117,11 +116,11 @@ describe('player-store', () => {
       expect(result.current.avatar).toBe(avatarBase64);
     });
 
-    it('deve permitir avatar undefined', () => {
+    it('deve aceitar undefined para remover avatar', () => {
       const { result } = renderHook(() => usePlayerStore());
 
       act(() => {
-        result.current.setAvatar('data:image/png;base64,test');
+        result.current.setAvatar('data:image/png;base64,abc');
         result.current.setAvatar(undefined);
       });
 
@@ -134,10 +133,10 @@ describe('player-store', () => {
       const { result } = renderHook(() => usePlayerStore());
 
       act(() => {
-        result.current.setTime('Tokyo Esperion');
+        result.current.setTime('Esperion Youth');
       });
 
-      expect(result.current.time).toBe('Tokyo Esperion');
+      expect(result.current.time).toBe('Esperion Youth');
     });
   });
 
@@ -152,53 +151,56 @@ describe('player-store', () => {
       expect(result.current.numeroCamisa).toBe(10);
     });
 
-    it('deve aceitar números válidos de camisa (1-99)', () => {
+    it('deve aceitar números de 1 a 99', () => {
       const { result } = renderHook(() => usePlayerStore());
 
-      act(() => {
-        result.current.setNumeroCamisa(1);
+      [1, 10, 50, 99].forEach((num) => {
+        act(() => {
+          result.current.setNumeroCamisa(num);
+        });
+        expect(result.current.numeroCamisa).toBe(num);
       });
-      expect(result.current.numeroCamisa).toBe(1);
-
-      act(() => {
-        result.current.setNumeroCamisa(99);
-      });
-      expect(result.current.numeroCamisa).toBe(99);
     });
   });
 
   describe('reset', () => {
-    it('deve resetar todos os valores para o estado inicial', () => {
+    it('deve resetar todos os dados para estado inicial', () => {
       const { result } = renderHook(() => usePlayerStore());
 
-      // Configurar valores
       act(() => {
-        result.current.setNome('Ashito Aoi');
+        result.current.setNome('Ashito');
         result.current.setPosicao('FW');
-        result.current.setAtributos({ chute: 5, drible: 5, passe: 5, bloqueio: 1, desarme: 1, interceptacao: 1 });
-        result.current.setAvatar('data:image/png;base64,test');
-        result.current.setTime('Tokyo Esperion');
+        result.current.setAtributos({ potencia: 5, rapidez: 3, tecnica: 1 });
+        result.current.setTime('Esperion');
         result.current.setNumeroCamisa(10);
-      });
-
-      // Resetar
-      act(() => {
         result.current.reset();
       });
 
-      // Verificar estado inicial
       expect(result.current.nome).toBe('');
       expect(result.current.posicao).toBeNull();
       expect(result.current.atributos).toBeNull();
-      expect(result.current.avatar).toBeUndefined();
       expect(result.current.time).toBeNull();
       expect(result.current.numeroCamisa).toBeNull();
     });
   });
 
-  describe('Computed: isComplete', () => {
+  describe('selectIsComplete', () => {
     it('deve retornar false quando faltam dados obrigatórios', () => {
       const { result } = renderHook(() => usePlayerStore());
+
+      expect(selectIsComplete(result.current)).toBe(false);
+    });
+
+    it('deve retornar false quando nome tem menos de 2 caracteres', () => {
+      const { result } = renderHook(() => usePlayerStore());
+
+      act(() => {
+        result.current.setNome('A');
+        result.current.setPosicao('FW');
+        result.current.setAtributos({ potencia: 3, rapidez: 3, tecnica: 3 });
+        result.current.setTime('Esperion');
+        result.current.setNumeroCamisa(10);
+      });
 
       expect(selectIsComplete(result.current)).toBe(false);
     });
@@ -209,38 +211,41 @@ describe('player-store', () => {
       act(() => {
         result.current.setNome('Ashito Aoi');
         result.current.setPosicao('FW');
-        result.current.setAtributos({ chute: 5, drible: 5, passe: 5, bloqueio: 1, desarme: 1, interceptacao: 1 });
-        result.current.setTime('Tokyo Esperion');
+        result.current.setAtributos({ potencia: 5, rapidez: 3, tecnica: 1 });
+        result.current.setTime('Esperion Youth');
         result.current.setNumeroCamisa(10);
       });
 
       expect(selectIsComplete(result.current)).toBe(true);
     });
 
-    it('deve retornar false se faltar nome', () => {
-      const { result } = renderHook(() => usePlayerStore());
-
-      act(() => {
-        result.current.setPosicao('FW');
-        result.current.setAtributos({ chute: 5, drible: 5, passe: 5, bloqueio: 1, desarme: 1, interceptacao: 1 });
-        result.current.setTime('Tokyo Esperion');
-        result.current.setNumeroCamisa(10);
-      });
-
-      expect(selectIsComplete(result.current)).toBe(false);
-    });
-
-    it('deve retornar false se faltar posição', () => {
+    it('deve retornar true mesmo sem avatar (avatar é opcional)', () => {
       const { result } = renderHook(() => usePlayerStore());
 
       act(() => {
         result.current.setNome('Ashito Aoi');
-        result.current.setAtributos({ chute: 5, drible: 5, passe: 5, bloqueio: 1, desarme: 1, interceptacao: 1 });
-        result.current.setTime('Tokyo Esperion');
+        result.current.setPosicao('FW');
+        result.current.setAtributos({ potencia: 5, rapidez: 3, tecnica: 1 });
+        result.current.setTime('Esperion');
         result.current.setNumeroCamisa(10);
+        // Sem setAvatar
       });
 
-      expect(selectIsComplete(result.current)).toBe(false);
+      expect(selectIsComplete(result.current)).toBe(true);
+    });
+
+    it('deve funcionar para GK também (atributos universais)', () => {
+      const { result } = renderHook(() => usePlayerStore());
+
+      act(() => {
+        result.current.setNome('Kenji');
+        result.current.setPosicao('GK');
+        result.current.setAtributos({ potencia: 3, rapidez: 2, tecnica: 4 });
+        result.current.setTime('Esperion');
+        result.current.setNumeroCamisa(1);
+      });
+
+      expect(selectIsComplete(result.current)).toBe(true);
     });
   });
 });

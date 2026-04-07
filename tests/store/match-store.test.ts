@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useMatchStore, selectTempoRestante, selectPeriodoAtual } from './match-store';
+import { useMatchStore, selectTempoRestante, selectPeriodoAtual } from '@/store/match-store';
 import type { ZonaCampo } from '@/types/match';
 
 describe('match-store', () => {

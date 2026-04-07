@@ -235,11 +235,10 @@ git commit -m "refactor: extrair constantes de validação"
 
 ## 📝 Notas de Desenvolvimento
 
-### ⚠️ ALERTA: Bun Não Instalado
-- **Status**: Bun NÃO está instalado no sistema
-- **Fallback**: Usar `npm` ou `pnpm` para comandos
-- **Impacto**: Performance reduzida (npm é ~3x mais lento)
-- **Ação**: Considerar instalar Bun futuramente
+### ✅ Bun Instalado e Verificado
+- **Status**: Bun v1.3.11 instalado e funcionando ✅
+- **Performance**: Otimizada (Bun é ~3x mais rápido que npm)
+- **Última Verificação**: 07/04/2026
 
 ### Decisões Técnicas Confirmadas
 - **Liga**: 12 times (ida e volta = 22 rodadas) ✅
@@ -250,9 +249,16 @@ git commit -m "refactor: extrair constantes de validação"
 - **Testes**: Vitest + Testing Library + Playwright configurados ✅
 - **Store**: Zustand implementado com persistência planejada ✅
 
+### Decisões Confirmadas (07/04/2026)
+- [x] **Estilo Visual**: Retângulos coloridos simples para campo ✅
+- [x] **Sprites**: Círculos coloridos baseados em uniforme (verde = protagonista) ✅
+- [x] **Ordem de Implementação**: Criação de jogador primeiro ✅
+- [x] **Package Manager**: Bun v1.3.11 instalado ✅
+- [x] **Sistema de Atributos**: 3 atributos (Potência, Rapidez, Técnica) - 9 pontos totais ✅
+
 ### Perguntas Pendentes (Pós-MVP)
 - [ ] Definir nomes/cores dos 12 times (pode usar genéricos no MVP)
-- [ ] Quantidade exata de NPCs por time (sugestão: 16-23 por elenco)
+- [ ] Quantidade exata de NPCs por time (23 jogadores confirmado)
 - [ ] Nomes dos NPCs (usar gerador aleatório no MVP?)
 - [ ] Redimensionamento automático de avatar (200x200px via CSS?)
 

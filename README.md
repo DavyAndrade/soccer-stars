@@ -79,19 +79,20 @@ bun run start
 
 ## 🎯 Escopo do MVP
 
-- ✅ Sistema de atributos (18 pontos para distribuir)
+- ✅ Sistema de atributos (9 pontos para distribuir - 3 atributos)
 - ✅ Confrontos baseados em d20 + atributos
 - ✅ Campo com 5 zonas
 - ✅ Partidas 11v11 com IA
 - ✅ Sistema de energia (10 pontos)
-- ✅ Goleiro com Captura/Espalme
+- ✅ Goleiro com Captura/Espalme (mecânica especial)
 - ✅ 90 minutos + acréscimos
 - ✅ Mobile First
 - ✅ Persistência via LocalStorage
+- ✅ Bun como runtime (v1.3.11)
 
 ## 🎮 Como Jogar
 
-1. **Crie seu jogador**: Distribua 18 pontos entre 6 atributos
+1. **Crie seu jogador**: Distribua 9 pontos entre 3 atributos (Potência, Rapidez, Técnica)
 2. **Entre em campo**: Partidas completas de 90 minutos
 3. **Tome decisões**: Chute, Drible ou Passe
 4. **Gerencie energia**: Cada ação consome 1 de energia

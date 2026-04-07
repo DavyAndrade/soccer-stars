@@ -1,55 +1,34 @@
 import { z } from 'zod';
 
 /**
- * Constantes de validação de atributos
+ * Constantes de validação de atributos (novo sistema - 3 atributos)
  */
-export const PONTOS_OBRIGATORIOS = 6; // 1 ponto em cada atributo (6 atributos)
-export const PONTOS_LIVRES = 12; // Pontos livres para distribuir
-export const TOTAL_PONTOS = PONTOS_OBRIGATORIOS + PONTOS_LIVRES; // 18 total
+export const PONTOS_OBRIGATORIOS = 3; // 1 ponto em cada atributo (3 atributos)
+export const PONTOS_LIVRES = 6; // Pontos livres para distribuir
+export const TOTAL_PONTOS = PONTOS_OBRIGATORIOS + PONTOS_LIVRES; // 9 total
 
 export const MIN_ATRIBUTO = 1;
 export const MAX_ATRIBUTO = 5;
 
 /**
- * Schema para atributos de jogador de campo
+ * Schema para atributos universais (todos os jogadores incluindo GK)
  * 
  * Regras:
  * - Cada atributo: min 1, max 5
- * - Total de pontos: exatamente 18
+ * - Total de pontos: exatamente 9
+ * - Aplicável a todos os jogadores (GK, DF, MF, FW)
  */
 export const PlayerAttributesSchema = z.object({
-  chute: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
-  drible: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
-  passe: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
-  bloqueio: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
-  desarme: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
-  interceptacao: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
+  potencia: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
+  rapidez: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
+  tecnica: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
 }).refine(
   (attrs) => {
-    const total = attrs.chute + attrs.drible + attrs.passe + 
-                  attrs.bloqueio + attrs.desarme + attrs.interceptacao;
+    const total = attrs.potencia + attrs.rapidez + attrs.tecnica;
     return total === TOTAL_PONTOS;
   },
   {
     message: `Total de atributos deve ser exatamente ${TOTAL_PONTOS}`,
-  }
-);
-
-/**
- * Schema para atributos de goleiro
- * 
- * Regras:
- * - Apenas Captura e Espalme
- * - Total: 6 pontos
- * - Min 1, Max 5 por atributo
- */
-export const GoalkeeperAttributesSchema = z.object({
-  captura: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
-  espalme: z.number().int().min(MIN_ATRIBUTO).max(MAX_ATRIBUTO),
-}).refine(
-  (attrs) => attrs.captura + attrs.espalme === 6,
-  {
-    message: 'Total de atributos de goleiro deve ser exatamente 6',
   }
 );
 
@@ -95,7 +74,7 @@ export const AvatarSchema = z.string()
   );
 
 /**
- * Schema para criação de jogador
+ * Schema para criação de jogador (simplificado - todos usam mesmo schema)
  */
 export const CreatePlayerSchema = z.object({
   nome: z.string()
@@ -105,25 +84,15 @@ export const CreatePlayerSchema = z.object({
   
   posicao: PlayerPositionSchema,
   
+  atributos: PlayerAttributesSchema,
+  
   avatar: AvatarSchema.optional(),
-}).and(
-  z.discriminatedUnion('posicao', [
-    z.object({
-      posicao: z.literal('GK'),
-      atributos: GoalkeeperAttributesSchema,
-    }),
-    z.object({
-      posicao: z.enum(['DF', 'MF', 'FW']),
-      atributos: PlayerAttributesSchema,
-    }),
-  ])
-);
+});
 
 /**
  * Type inference
  */
 export type PlayerAttributesInput = z.infer<typeof PlayerAttributesSchema>;
-export type GoalkeeperAttributesInput = z.infer<typeof GoalkeeperAttributesSchema>;
 export type PlayerPositionInput = z.infer<typeof PlayerPositionSchema>;
 export type AvatarInput = z.infer<typeof AvatarSchema>;
 export type CreatePlayerInput = z.infer<typeof CreatePlayerSchema>;
