@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadCareerSlot } from '@/lib/storage';
+import { getNextCareerMatch, loadCareerSlot } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { CareerNav } from '@/components/carreira/career-nav';
 
@@ -94,6 +94,7 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
 
   const leagueName = getLeagueName(team?.conferencia);
   const teamPrimary = team?.corPrimaria ?? '#3f3f46';
+  const nextMatch = team ? getNextCareerMatch(save, team.id) : null;
   const surfaceStyle = {
     borderColor: hexToRgba(teamPrimary, 0.35),
     backgroundColor: 'rgba(24, 24, 27, 0.35)',
@@ -113,7 +114,7 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
 
         <section className="grid gap-4 md:grid-cols-2">
           <article className="rounded-xl border p-4" style={surfaceStyle}>
-            <h2 className="text-lg font-semibold">Protagonista</h2>
+            <h2 className="text-2xl font-semibold">Meu Jogador</h2>
             <div className="mt-3 flex items-center gap-4">
               {save.protagonista.avatar ? (
                 <img
@@ -150,6 +151,20 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
                 Ir para Partida
               </Button>
             </div>
+          </article>
+        </section>
+
+        <section>
+          <article className="rounded-xl border p-4" style={surfaceStyle}>
+              <h2 className="text-lg font-semibold">Próxima Partida</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {team && nextMatch
+                  ? `Rodada ${nextMatch.rodada}: ${nextMatch.isHome ? `${team.nome} vs ${nextMatch.opponent.nome}` : `${nextMatch.opponent.nome} vs ${team.nome}`}`
+                  : 'Adversário ainda não definido'}
+              </p>
+            <Button className="mt-3" onClick={() => router.push(`/partida?slot=${slot}`)}>
+              Jogar Partida
+            </Button>
           </article>
         </section>
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadCareerSlot, updateTeamEscalacao } from '@/lib/storage';
+import { getConferenceStandings, loadCareerSlot, updateTeamEscalacao } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { FORMACOES, type FormacaoNome, type TeamSquadPlayer, type Time } from '@/types/team';
 import { CareerNav } from '@/components/carreira/career-nav';
@@ -119,9 +119,7 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
 
   const ranking = useMemo(() => {
     if (!save || !team) return [];
-    return [...save.liga.times]
-      .filter((currentTeam) => currentTeam.conferencia === team.conferencia)
-      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return getConferenceStandings(save, team.conferencia);
   }, [save, team]);
 
   if (!isHydrated) {
@@ -220,18 +218,21 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b text-left" style={{ borderColor: hexToRgba(teamPrimary, 0.35) }}>
-                  <th className="px-2 py-2">#</th>
+                  <th className="px-2 py-2">Pos.</th>
                   <th className="px-2 py-2">Time</th>
                   <th className="px-2 py-2">Pts</th>
-                  <th className="px-2 py-2">J</th>
+                  <th className="px-2 py-2">PJ</th>
+                  <th className="px-2 py-2">V</th>
+                  <th className="px-2 py-2">E</th>
+                  <th className="px-2 py-2">D</th>
                 </tr>
               </thead>
               <tbody>
-                {ranking.map((currentTeam, index) => {
-                  const isMyTeam = currentTeam.id === team.id;
+                {ranking.map((standing, index) => {
+                  const isMyTeam = standing.time.id === team.id;
                   return (
                     <tr
-                      key={currentTeam.id}
+                      key={standing.time.id}
                       className="border-b"
                       style={{
                         borderColor: hexToRgba(teamPrimary, 0.2),
@@ -239,9 +240,12 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
                       }}
                     >
                       <td className="px-2 py-2">{index + 1}</td>
-                      <td className="px-2 py-2">{currentTeam.nome}</td>
-                      <td className="px-2 py-2">0</td>
-                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">{standing.time.nome}</td>
+                      <td className="px-2 py-2">{standing.pts}</td>
+                      <td className="px-2 py-2">{standing.pj}</td>
+                      <td className="px-2 py-2">{standing.v}</td>
+                      <td className="px-2 py-2">{standing.e}</td>
+                      <td className="px-2 py-2">{standing.d}</td>
                     </tr>
                   );
                 })}

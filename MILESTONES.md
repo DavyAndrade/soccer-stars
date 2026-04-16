@@ -235,6 +235,14 @@ git commit -m "refactor: extrair constantes de validação"
 
 ## 📝 Notas de Desenvolvimento
 
+### Atualização recente — Modo Carreira
+- ✅ Fluxo `/carreira` → `/partida` com **próxima partida por rodada** implementado
+- ✅ Persistência de resultado em save por slot (`resultados` + `rodadaAtual`)
+- ✅ Tabela da conferência em `/carreira/time` agora usa estatísticas reais (**Pts, PJ, V, E, D**)
+- ✅ Estrutura de dados de carreira preservada ao editar protagonista/escalação (sem perder histórico da liga)
+- ✅ Partida deixou de aceitar placar manual: resultado agora vem da gameplay em `/partida`
+- ✅ Finalização de rodada simula automaticamente os demais confrontos da EAST/WEST e avança a temporada regular
+
 ### ✅ Bun Instalado e Verificado
 - **Status**: Bun v1.3.11 instalado e funcionando ✅
 - **Performance**: Otimizada (Bun é ~3x mais rápido que npm)

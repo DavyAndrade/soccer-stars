@@ -1,19 +1,563 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { PhaserMatch } from '@/components/partida/phaser-match';
-import { loadCareerSlot } from '@/lib/storage';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { decidirAcaoNPC } from '@/lib/ai';
+import { executarConfronto, executarConfrontoGoleiro } from '@/lib/combat';
+import { rollD10, rollD5 } from '@/lib/dice';
+import { finalizeCareerRound, getNextCareerMatch, loadCareerSlot } from '@/lib/storage';
+import type { ZonaCampo } from '@/types/match';
+import { POSICOES_POR_ZONA, type PlayerAttributes, type PlayerPosition } from '@/types/player';
+import type { TeamSquadPlayer, Time } from '@/types/team';
 
 interface PartidaClientProps {
   slot: 1 | 2 | 3;
 }
 
+type MatchTeam = 'protagonista' | 'adversario';
+type MatchAction = 'chute' | 'drible' | 'passe';
+type EnergyMap = Record<string, number>;
+type UniformeEscolha = 'primario' | 'secundario';
+type LogPart = { text: string; side?: MatchTeam };
+type LogEntry = { id: number; parts: LogPart[] };
+
+const ZONAS: ZonaCampo[] = ['DF1', 'MI1', 'MC', 'MI2', 'DF2'];
+const ACTION_DELAY_MS = 2000;
+const SKIP_DELAY_MS = 30;
+
+function clampEnergy(value: number): number {
+  return Math.max(0, Math.min(10, value));
+}
+
+function mirrorZone(zone: ZonaCampo): ZonaCampo {
+  if (zone === 'DF1') return 'DF2';
+  if (zone === 'MI1') return 'MI2';
+  if (zone === 'MI2') return 'MI1';
+  if (zone === 'DF2') return 'DF1';
+  return 'MC';
+}
+
+function canShoot(side: MatchTeam, zone: ZonaCampo): boolean {
+  if (side === 'protagonista') {
+    return zone === 'MI2' || zone === 'DF2';
+  }
+  return zone === 'MI1' || zone === 'DF1';
+}
+
+function advanceZone(side: MatchTeam, zone: ZonaCampo): ZonaCampo {
+  const index = ZONAS.indexOf(zone);
+  if (index < 0) return zone;
+  if (side === 'protagonista') {
+    return ZONAS[Math.min(index + 1, ZONAS.length - 1)] ?? zone;
+  }
+  return ZONAS[Math.max(index - 1, 0)] ?? zone;
+}
+
+function pickRandom<T>(values: T[]): T | null {
+  if (values.length === 0) return null;
+  return values[Math.floor(Math.random() * values.length)] ?? null;
+}
+
+function fallbackAttributes(): PlayerAttributes {
+  return { potencia: 3, rapidez: 3, tecnica: 3 };
+}
+
+function createEnergyMap(players: TeamSquadPlayer[]): EnergyMap {
+  return Object.fromEntries(players.map((player) => [player.id, 10]));
+}
+
+function getEnergy(energyMap: EnergyMap, playerId?: string | null): number {
+  if (!playerId) return 10;
+  return energyMap[playerId] ?? 10;
+}
+
+function spendEnergy(energyMap: EnergyMap, playerIds: Array<string | null | undefined>): EnergyMap {
+  const next = { ...energyMap };
+  new Set(playerIds.filter(Boolean)).forEach((playerId) => {
+    const id = playerId as string;
+    next[id] = clampEnergy((next[id] ?? 10) - 1);
+  });
+  return next;
+}
+
+function recoverAllEnergy(energyMap: EnergyMap): EnergyMap {
+  const next: EnergyMap = {};
+  Object.entries(energyMap).forEach(([playerId, value]) => {
+    next[playerId] = clampEnergy(value + 5);
+  });
+  return next;
+}
+
 export function PartidaClient({ slot }: PartidaClientProps) {
+  const router = useRouter();
   const [save, setSave] = useState<ReturnType<typeof loadCareerSlot>>(null);
+  const [placarProtagonista, setPlacarProtagonista] = useState(0);
+  const [placarAdversario, setPlacarAdversario] = useState(0);
+  const [energiaPorJogador, setEnergiaPorJogador] = useState<EnergyMap>({});
+  const [zonaAtual, setZonaAtual] = useState<ZonaCampo>('MC');
+  const [timeComPosse, setTimeComPosse] = useState<MatchTeam>('protagonista');
+  const [portadorId, setPortadorId] = useState<string | null>(null);
+  const [minutoAtual, setMinutoAtual] = useState(0);
+  const [acrescimos1Tempo, setAcrescimos1Tempo] = useState(0);
+  const [acrescimos2Tempo, setAcrescimos2Tempo] = useState(0);
+  const [partidaIniciada, setPartidaIniciada] = useState(false);
+  const [partidaFinalizada, setPartidaFinalizada] = useState(false);
+  const [concluindoRodada, setConcluindoRodada] = useState(false);
+  const [pulandoParaResultado, setPulandoParaResultado] = useState(false);
+  const [aguardandoPasse, setAguardandoPasse] = useState(false);
+  const [uniformeProtagonista, setUniformeProtagonista] = useState<UniformeEscolha>('primario');
+  const [uniformeAdversario, setUniformeAdversario] = useState<UniformeEscolha>('primario');
+  const [log, setLog] = useState<LogEntry[]>([]);
+  const logCounter = useRef(0);
+  const minutoRef = useRef(0);
 
   useEffect(() => {
     setSave(loadCareerSlot(slot));
   }, [slot]);
+
+  useEffect(() => {
+    minutoRef.current = minutoAtual;
+  }, [minutoAtual]);
+
+  useEffect(() => {
+    if (!save) return;
+    setPlacarProtagonista(0);
+    setPlacarAdversario(0);
+    setEnergiaPorJogador({});
+    setZonaAtual('MC');
+    setTimeComPosse('protagonista');
+    setPortadorId(null);
+    setMinutoAtual(0);
+    minutoRef.current = 0;
+    setAcrescimos1Tempo(rollD5());
+    setAcrescimos2Tempo(rollD10());
+    setPartidaIniciada(false);
+    setPartidaFinalizada(false);
+    setPulandoParaResultado(false);
+    setAguardandoPasse(false);
+    setUniformeProtagonista('primario');
+    setUniformeAdversario('primario');
+    setLog([]);
+  }, [save]);
+
+  const team = useMemo<Time | null>(() => {
+    if (!save) return null;
+    return (save.liga.times as Time[]).find((time) => time.id === save.protagonista.timeId) ?? null;
+  }, [save]);
+  const nextMatch = save && team ? getNextCareerMatch(save, team.id) : null;
+  const opponentTeam = nextMatch?.opponent ?? null;
+
+  const protagonistasTitulares = useMemo(
+    () => (team ? team.jogadores.filter((player) => player.titular) : []),
+    [team],
+  );
+  const adversariosTitulares = useMemo(
+    () => (opponentTeam ? opponentTeam.jogadores.filter((player) => player.titular) : []),
+    [opponentTeam],
+  );
+  const protagonista = useMemo(
+    () => protagonistasTitulares.find((player) => player.isProtagonista) ?? null,
+    [protagonistasTitulares],
+  );
+
+  const tempoTotal = 90 + acrescimos1Tempo + acrescimos2Tempo;
+  const fimPrimeiroTempo = 45 + acrescimos1Tempo;
+  const protagonistaParticipando = Boolean(protagonista);
+  const protagonistaTemBola = Boolean(
+    partidaIniciada && protagonista && timeComPosse === 'protagonista' && portadorId === protagonista.id,
+  );
+
+  const corDoTime = (side: MatchTeam): string => {
+    if (side === 'protagonista') {
+      if (!team) return '#e4e4e7';
+      return uniformeProtagonista === 'primario' ? team.corPrimaria : team.corSecundaria;
+    }
+    if (!opponentTeam) return '#e4e4e7';
+    return uniformeAdversario === 'primario' ? opponentTeam.corPrimaria : opponentTeam.corSecundaria;
+  };
+
+  const appendLog = (parts: LogPart[]) => {
+    setLog((history) => {
+      const text = parts.map((part) => part.text).join('');
+      if (history[0] && history[0].parts.map((part) => part.text).join('') === text) {
+        return history;
+      }
+      logCounter.current += 1;
+      return [{ id: logCounter.current, parts }, ...history].slice(0, 12);
+    });
+  };
+
+  const getTitulares = (side: MatchTeam): TeamSquadPlayer[] =>
+    side === 'protagonista' ? protagonistasTitulares : adversariosTitulares;
+
+  const zoneForSide = (side: MatchTeam, zone: ZonaCampo): ZonaCampo =>
+    side === 'protagonista' ? zone : mirrorZone(zone);
+
+  const getCurrentCarrier = (side: MatchTeam): TeamSquadPlayer | null => {
+    if (!portadorId) return null;
+    return getTitulares(side).find((player) => player.id === portadorId) ?? null;
+  };
+
+  const chooseBallCarrier = (
+    side: MatchTeam,
+    zone: ZonaCampo,
+    options?: { excludeProtagonist?: boolean; preferredPositions?: PlayerPosition[] },
+  ): TeamSquadPlayer | null => {
+    const pool = getTitulares(side);
+    if (pool.length === 0) return null;
+
+    const filteredPool = options?.excludeProtagonist
+      ? pool.filter((player) => !player.isProtagonista)
+      : pool;
+    const sourcePool = filteredPool.length > 0 ? filteredPool : pool;
+
+    if (options?.preferredPositions && options.preferredPositions.length > 0) {
+      const preferred = sourcePool.filter((player) => options.preferredPositions?.includes(player.posicao));
+      if (preferred.length > 0) return pickRandom(preferred);
+    }
+
+    const allowed = POSICOES_POR_ZONA[zoneForSide(side, zone)] ?? ['DF', 'MF', 'FW'];
+    const candidates = sourcePool.filter((player) => allowed.includes(player.posicao) && player.posicao !== 'GK');
+    return pickRandom(candidates.length > 0 ? candidates : sourcePool);
+  };
+
+  const chooseKickoffCarrier = (side: MatchTeam) =>
+    chooseBallCarrier(side, 'MC', { preferredPositions: ['MF', 'FW'] });
+
+  const escolherDefensor = (defendingSide: MatchTeam, zone: ZonaCampo): TeamSquadPlayer | null => {
+    const pool = getTitulares(defendingSide);
+    if (pool.length === 0) return null;
+    const allowed = POSICOES_POR_ZONA[zoneForSide(defendingSide, zone)] ?? ['DF', 'MF', 'FW'];
+    const candidates = pool.filter((player) => allowed.includes(player.posicao));
+    return pickRandom(candidates.length > 0 ? candidates : pool);
+  };
+
+  const chooseRecoveredCarrier = (defendingSide: MatchTeam, defender: TeamSquadPlayer | null): TeamSquadPlayer | null => {
+    if (defendingSide !== 'protagonista') {
+      return chooseBallCarrier(defendingSide, zonaAtual);
+    }
+    if (defender?.isProtagonista) {
+      return defender;
+    }
+    return chooseBallCarrier('protagonista', zonaAtual, { excludeProtagonist: true });
+  };
+
+  const avancarMinuto = (parts: LogPart[]) => {
+    const nextMinute = minutoRef.current + 1;
+    minutoRef.current = nextMinute;
+    setMinutoAtual(nextMinute);
+
+    if (nextMinute === fimPrimeiroTempo) {
+      setEnergiaPorJogador((currentEnergy) => recoverAllEnergy(currentEnergy));
+      appendLog([...parts, { text: ' Intervalo: estamina recuperada em +5.' }]);
+    } else {
+      appendLog(parts);
+    }
+
+    if (nextMinute >= tempoTotal) {
+      setPartidaFinalizada(true);
+    }
+  };
+
+  const resolveGoal = (attackingSide: MatchTeam, atacanteNome: string, goleiroNome: string) => {
+    const concedingSide: MatchTeam = attackingSide === 'protagonista' ? 'adversario' : 'protagonista';
+    if (attackingSide === 'protagonista') {
+      setPlacarProtagonista((current) => current + 1);
+    } else {
+      setPlacarAdversario((current) => current + 1);
+    }
+    const kickoff = chooseKickoffCarrier(concedingSide);
+    setTimeComPosse(concedingSide);
+    setPortadorId(kickoff?.id ?? null);
+    setZonaAtual('MC');
+    avancarMinuto([
+      { text: 'GOOOOL! ' },
+      { text: atacanteNome, side: attackingSide },
+      { text: ' venceu ' },
+      { text: goleiroNome, side: concedingSide },
+      { text: ' e marcou.' },
+    ]);
+  };
+
+  const resolverAcao = (side: MatchTeam, action: MatchAction, passeDestinoId?: string) => {
+    if (!team || !opponentTeam || !partidaIniciada || partidaFinalizada) return;
+
+    const attacker = getCurrentCarrier(side) ?? chooseBallCarrier(side, zonaAtual);
+    if (!attacker) return;
+
+    const defendingSide: MatchTeam = side === 'protagonista' ? 'adversario' : 'protagonista';
+    const defender = escolherDefensor(defendingSide, zonaAtual);
+    const attackerAttrs = attacker.atributos ?? fallbackAttributes();
+    const defenderAttrs = defender?.atributos ?? fallbackAttributes();
+    const energiaAtacante = getEnergy(energiaPorJogador, attacker.id);
+    const energiaDefensor = getEnergy(energiaPorJogador, defender?.id);
+
+    if (action === 'chute' && !canShoot(side, zonaAtual)) {
+      avancarMinuto([
+        { text: 'O chute de ' },
+        { text: attacker.nome, side },
+        { text: ' não saiu por estar fora da zona de finalização.' },
+      ]);
+      return;
+    }
+
+    const isLongShot =
+      action === 'chute' &&
+      ((side === 'protagonista' && zonaAtual === 'MI2') || (side === 'adversario' && zonaAtual === 'MI1'));
+    const adjustedAttackerAttrs: PlayerAttributes = isLongShot
+      ? { ...attackerAttrs, potencia: 0 }
+      : attackerAttrs;
+
+    const confronto = executarConfronto(action, adjustedAttackerAttrs, defenderAttrs, energiaAtacante, energiaDefensor);
+    setEnergiaPorJogador((current) => spendEnergy(current, [attacker.id, defender?.id]));
+
+    if (confronto.vencedor === 'defensor') {
+      const newCarrier = chooseRecoveredCarrier(defendingSide, defender);
+      setTimeComPosse(defendingSide);
+      setPortadorId(newCarrier?.id ?? defender?.id ?? null);
+
+      if (action === 'chute') {
+        avancarMinuto([
+          { text: defender?.nome ?? 'defensor', side: defendingSide },
+          { text: ' bloqueou o chute de ' },
+          { text: attacker.nome, side },
+          { text: '.' },
+        ]);
+      } else if (action === 'drible') {
+        avancarMinuto([
+          { text: 'O drible de ' },
+          { text: attacker.nome, side },
+          { text: ' foi desarmado por ' },
+          { text: defender?.nome ?? 'defensor', side: defendingSide },
+          { text: '!' },
+        ]);
+      } else {
+        avancarMinuto([
+          { text: 'O passe de ' },
+          { text: attacker.nome, side },
+          { text: ' foi interceptado por ' },
+          { text: defender?.nome ?? 'defensor', side: defendingSide },
+          { text: '!' },
+        ]);
+      }
+      return;
+    }
+
+    if (action === 'drible') {
+      setZonaAtual((current) => advanceZone(side, current));
+      setTimeComPosse(side);
+      setPortadorId(attacker.id);
+      avancarMinuto([
+        { text: attacker.nome, side },
+        { text: ' driblou ' },
+        { text: defender?.nome ?? 'o marcador', side: defendingSide },
+        { text: '!' },
+      ]);
+      return;
+    }
+
+    if (action === 'passe') {
+      const receiverPool = getTitulares(side).filter((player) => player.id !== attacker.id && player.posicao !== 'GK');
+      const receiver =
+        side === 'protagonista'
+          ? (passeDestinoId ? receiverPool.find((player) => player.id === passeDestinoId) ?? null : pickRandom(receiverPool))
+          : pickRandom(receiverPool);
+
+      setZonaAtual((current) => advanceZone(side, current));
+      setTimeComPosse(side);
+      setPortadorId(receiver?.id ?? attacker.id);
+      avancarMinuto([
+        { text: attacker.nome, side },
+        { text: ' passou a bola para ' },
+        { text: receiver?.nome ?? 'companheiro', side },
+        { text: ' com sucesso!' },
+      ]);
+      return;
+    }
+
+    const goalkeeper =
+      (defendingSide === 'protagonista' ? protagonistasTitulares : adversariosTitulares).find(
+        (player) => player.posicao === 'GK',
+      ) ?? null;
+    const goleiroNome = goalkeeper?.nome ?? 'goleiro';
+
+    const dueloGoleiro = executarConfrontoGoleiro(
+      'chute',
+      adjustedAttackerAttrs,
+      goalkeeper?.atributos ?? fallbackAttributes(),
+      energiaAtacante,
+      getEnergy(energiaPorJogador, goalkeeper?.id),
+    );
+    setEnergiaPorJogador((current) => spendEnergy(current, [goalkeeper?.id]));
+
+    if (dueloGoleiro.vencedor === 'atacante') {
+      resolveGoal(side, attacker.nome, goleiroNome);
+      return;
+    }
+
+    if (dueloGoleiro.acaoGoleiro === 'espalme') {
+      const reboundWinner: MatchTeam = Math.random() < 0.5 ? 'protagonista' : 'adversario';
+      const newCarrier =
+        reboundWinner === 'protagonista'
+          ? chooseBallCarrier('protagonista', 'MC', { excludeProtagonist: true })
+          : chooseBallCarrier('adversario', 'MC');
+      setTimeComPosse(reboundWinner);
+      setPortadorId(newCarrier?.id ?? null);
+      setZonaAtual('MC');
+      avancarMinuto([
+        { text: 'Defesa de espalme de ' },
+        { text: goleiroNome, side: defendingSide },
+        { text: '! Bola viva no meio-campo.' },
+      ]);
+      return;
+    }
+
+    const newCarrier =
+      defendingSide === 'protagonista'
+        ? chooseBallCarrier('protagonista', 'MC', { excludeProtagonist: true })
+        : chooseBallCarrier('adversario', 'MC');
+    setTimeComPosse(defendingSide);
+    setPortadorId(newCarrier?.id ?? null);
+    setZonaAtual('MC');
+    avancarMinuto([
+      { text: 'Captura segura de ' },
+      { text: goleiroNome, side: defendingSide },
+      { text: '.' },
+    ]);
+  };
+
+  useEffect(() => {
+    if (!team || !opponentTeam || !partidaIniciada || partidaFinalizada || aguardandoPasse) return;
+    if (!pulandoParaResultado && protagonistaTemBola) return;
+
+    const timeout = window.setTimeout(() => {
+      const side = timeComPosse;
+      const atacante = getCurrentCarrier(side) ?? chooseBallCarrier(side, zonaAtual);
+      if (!atacante) return;
+
+      const contextZone = zoneForSide(side, zonaAtual);
+      const [placarNPC, placarOponente] =
+        side === 'protagonista'
+          ? [placarProtagonista, placarAdversario]
+          : [placarAdversario, placarProtagonista];
+
+      const acaoIA = decidirAcaoNPC(
+        {
+          zona: contextZone,
+          energia: getEnergy(energiaPorJogador, atacante.id),
+          placarNPC,
+          placarOponente,
+          minuto: minutoAtual,
+          periodo: minutoAtual < fimPrimeiroTempo ? 'primeiro_tempo' : 'segundo_tempo',
+        },
+        atacante.atributos ?? fallbackAttributes(),
+      );
+
+      setPortadorId(atacante.id);
+      resolverAcao(side, acaoIA);
+    }, pulandoParaResultado ? SKIP_DELAY_MS : ACTION_DELAY_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    aguardandoPasse,
+    energiaPorJogador,
+    fimPrimeiroTempo,
+    minutoAtual,
+    opponentTeam,
+    partidaFinalizada,
+    partidaIniciada,
+    placarAdversario,
+    placarProtagonista,
+    protagonistaTemBola,
+    pulandoParaResultado,
+    team,
+    timeComPosse,
+    zonaAtual,
+  ]);
+
+  useEffect(() => {
+    if (!partidaIniciada && aguardandoPasse) {
+      setAguardandoPasse(false);
+      return;
+    }
+    if (!protagonistaTemBola && aguardandoPasse) {
+      setAguardandoPasse(false);
+    }
+  }, [aguardandoPasse, partidaIniciada, protagonistaTemBola]);
+
+  useEffect(() => {
+    if (partidaFinalizada) {
+      setPulandoParaResultado(false);
+    }
+  }, [partidaFinalizada]);
+
+  const iniciarPartida = () => {
+    if (!team || !opponentTeam || !nextMatch) return;
+    const kickoffSide: MatchTeam = nextMatch.isHome ? 'protagonista' : 'adversario';
+    const kickoff = chooseKickoffCarrier(kickoffSide);
+    setEnergiaPorJogador(createEnergyMap([...protagonistasTitulares, ...adversariosTitulares]));
+    setTimeComPosse(kickoffSide);
+    setPortadorId(kickoff?.id ?? null);
+    setPartidaIniciada(true);
+    appendLog([
+      { text: 'Pontapé inicial com ' },
+      { text: kickoff?.nome ?? (kickoffSide === 'protagonista' ? team.nome : opponentTeam.nome), side: kickoffSide },
+      { text: '.' },
+    ]);
+  };
+
+  const confirmarPasse = (targetId: string) => {
+    setAguardandoPasse(false);
+    resolverAcao('protagonista', 'passe', targetId);
+  };
+
+  const handleConcluirRodada = () => {
+    setConcluindoRodada(true);
+    const updated = finalizeCareerRound(slot, placarProtagonista, placarAdversario);
+    if (!updated) return;
+    setSave(updated);
+    router.push(`/carreira?slot=${slot}`);
+  };
+
+  const handlePularParaResultado = () => {
+    if (!partidaIniciada || partidaFinalizada) return;
+    setAguardandoPasse(false);
+    setPulandoParaResultado(true);
+    appendLog([{ text: 'Simulação acelerada ativada. Indo para o resultado...' }]);
+  };
+
+  const nomeTimePosse = timeComPosse === 'protagonista' ? team?.nome : opponentTeam?.nome;
+  const jogadorComBola =
+    (timeComPosse === 'protagonista' ? protagonistasTitulares : adversariosTitulares).find(
+      (player) => player.id === portadorId,
+    ) ?? null;
+  const estaminaProtagonista = getEnergy(energiaPorJogador, protagonista?.id);
+  const estaminaPortador = getEnergy(energiaPorJogador, jogadorComBola?.id);
+
+  const renderEscalacaoCard = (side: MatchTeam, title: string, players: TeamSquadPlayer[]) => (
+    <article className="rounded-xl border border-border p-4">
+      <h3 className="text-base font-semibold" style={{ color: corDoTime(side) }}>{title}</h3>
+      <div className="mt-3 space-y-2 text-sm">
+        {[...players]
+          .sort((a, b) => a.numero - b.numero)
+          .map((player) => (
+            <div
+              key={player.id}
+              className="flex items-center justify-between rounded-md border border-border px-2 py-1"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium" style={{ color: corDoTime(side) }}>
+                  #{player.numero} {player.nome}
+                </p>
+                <p className="text-xs text-muted-foreground">{player.posicao}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">STA {getEnergy(energiaPorJogador, player.id)}/10</p>
+            </div>
+          ))}
+      </div>
+    </article>
+  );
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 px-4 py-6">
@@ -23,7 +567,153 @@ export function PartidaClient({ slot }: PartidaClientProps) {
           Slot {slot} • {save.protagonista.nome} • Temporada {save.temporadaAtual}
         </p>
       )}
-      <PhaserMatch />
+
+      {team && nextMatch && opponentTeam ? (
+        <>
+          {!partidaIniciada ? (
+            <section className="rounded-xl border border-border p-4">
+              <h2 className="text-lg font-semibold">Preparação da Partida</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Rodada {nextMatch.rodada}: {nextMatch.isHome ? `${team.nome} vs ${opponentTeam.nome}` : `${opponentTeam.nome} vs ${team.nome}`}
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <label className="space-y-1 text-sm">
+                  <span>Uniforme {team.nome}</span>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-background px-2"
+                    value={uniformeProtagonista}
+                    onChange={(event) => setUniformeProtagonista(event.target.value as UniformeEscolha)}
+                  >
+                    <option value="primario">Primário ({team.corPrimaria})</option>
+                    <option value="secundario">Secundário ({team.corSecundaria})</option>
+                  </select>
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span>Uniforme {opponentTeam.nome}</span>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-background px-2"
+                    value={uniformeAdversario}
+                    onChange={(event) => setUniformeAdversario(event.target.value as UniformeEscolha)}
+                  >
+                    <option value="primario">Primário ({opponentTeam.corPrimaria})</option>
+                    <option value="secundario">Secundário ({opponentTeam.corSecundaria})</option>
+                  </select>
+                </label>
+              </div>
+              <Button className="mt-4" onClick={iniciarPartida}>
+                Iniciar Partida
+              </Button>
+            </section>
+          ) : (
+            <section className="rounded-xl border border-border p-4">
+              <h2 className="text-lg font-semibold">Rodada {nextMatch.rodada}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {nextMatch.isHome ? `${team.nome} vs ${opponentTeam.nome}` : `${opponentTeam.nome} vs ${team.nome}`}
+              </p>
+              <p className="mt-3 text-base font-semibold">
+                {team.nome} {placarProtagonista} x {placarAdversario} {opponentTeam.nome}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Min {Math.min(minutoAtual, tempoTotal)}/{tempoTotal} • Zona {zonaAtual} • Posse {nomeTimePosse}
+                {jogadorComBola ? ` (${jogadorComBola.nome})` : ''}
+              </p>
+              {!protagonistaParticipando ? (
+                <p className="mt-1 text-xs text-amber-300">
+                  Protagonista está fora desta partida. O jogo está sendo simulado pelo log.
+                </p>
+              ) : null}
+              <p className="mt-1 text-sm text-muted-foreground">
+                Estamina: {protagonista?.nome ?? 'Protagonista'} {estaminaProtagonista}/10
+                {jogadorComBola ? ` • ${jogadorComBola.nome} ${estaminaPortador}/10` : ''}
+              </p>
+
+              <div className="mt-4 grid grid-cols-5 gap-2 text-center text-xs">
+                {ZONAS.map((zona) => (
+                  <div
+                    key={zona}
+                    className={`rounded-md border px-2 py-3 ${zona === zonaAtual ? 'border-emerald-400 bg-emerald-500/20' : 'border-border'}`}
+                  >
+                    {zona}
+                  </div>
+                ))}
+              </div>
+
+              {!partidaFinalizada && protagonistaTemBola && !aguardandoPasse ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button onClick={() => resolverAcao('protagonista', 'chute')} disabled={!canShoot('protagonista', zonaAtual)}>
+                    Chute
+                  </Button>
+                  <Button onClick={() => resolverAcao('protagonista', 'drible')} variant="outline">
+                    Drible
+                  </Button>
+                  <Button onClick={() => setAguardandoPasse(true)} variant="outline">
+                    Passe
+                  </Button>
+                </div>
+              ) : null}
+
+              {!partidaFinalizada ? (
+                <div className="mt-4">
+                  <Button variant="secondary" onClick={handlePularParaResultado} disabled={pulandoParaResultado}>
+                    {pulandoParaResultado ? 'Pulando para resultado...' : 'Pular para resultado'}
+                  </Button>
+                </div>
+              ) : null}
+
+              {!partidaFinalizada && aguardandoPasse ? (
+                <div className="mt-4 rounded-lg border border-border p-3">
+                  <p className="mb-2 text-sm font-medium">Escolha um companheiro para o passe</p>
+                  <div className="flex flex-wrap gap-2">
+                    {protagonistasTitulares
+                      .filter((player) => !player.isProtagonista)
+                      .map((player) => (
+                        <Button key={player.id} size="sm" variant="outline" onClick={() => confirmarPasse(player.id)}>
+                          #{player.numero} {player.nome}
+                        </Button>
+                      ))}
+                    <Button size="sm" variant="secondary" onClick={() => setAguardandoPasse(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {partidaFinalizada ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <p className="text-sm font-medium">Fim de jogo.</p>
+                  <Button onClick={handleConcluirRodada} disabled={concluindoRodada}>
+                    Concluir rodada e simular os demais jogos
+                  </Button>
+                </div>
+              ) : null}
+
+              <div className="mt-4 space-y-1 text-xs">
+                {log.map((entry) => (
+                  <p key={entry.id} className="text-muted-foreground">
+                    {entry.parts.map((part, index) => (
+                      <span
+                        key={`${entry.id}-${index}`}
+                        style={part.side ? { color: corDoTime(part.side), fontWeight: 600 } : undefined}
+                      >
+                        {part.text}
+                      </span>
+                    ))}
+                  </p>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="grid gap-4 md:grid-cols-2">
+            {renderEscalacaoCard('protagonista', `Escalação ${team.nome}`, protagonistasTitulares)}
+            {renderEscalacaoCard('adversario', `Escalação ${opponentTeam.nome}`, adversariosTitulares)}
+          </section>
+        </>
+      ) : (
+        <section className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+          Temporada encerrada ou sem partida disponível no momento.
+        </section>
+      )}
     </main>
   );
 }

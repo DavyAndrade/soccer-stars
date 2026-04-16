@@ -22,7 +22,7 @@ const TEAM_SEEDS: TeamSeed[] = [
   { id: 'maebashi-ikuei-hs', nome: 'Maebashi Ikuei HS', conferencia: 'EAST', corPrimaria: '#E10600', corSecundaria: '#FFFFFF' },
   { id: 'shohei-hs', nome: 'Shohei HS', conferencia: 'EAST', corPrimaria: '#5C2D91', corSecundaria: '#FFFFFF' },
   { id: 'kashiwa-reysol-u18', nome: 'Kashiwa Reysol U18', conferencia: 'EAST', corPrimaria: '#F2D13D', corSecundaria: '#111111' },
-  { id: 'rku-kashiwa-hs', nome: 'RKU Kashiwa High School', conferencia: 'EAST', corPrimaria: '#0E8A44', corSecundaria: '#FFFFFF' },
+  { id: 'rku-kashiwa-hs', nome: 'RKU Kashiwa HS', conferencia: 'EAST', corPrimaria: '#0E8A44', corSecundaria: '#FFFFFF' },
   { id: 'tokyo-verdy-u18', nome: 'Tokyo Verdy U18', conferencia: 'EAST', corPrimaria: '#0B8A43', corSecundaria: '#FFFFFF' },
   { id: 'fc-tokyo-u18', nome: 'FC Tokyo U18', conferencia: 'EAST', corPrimaria: '#313A8A', corSecundaria: '#D81E34' },
   { id: 'yokohama-fc-u18', nome: 'Yokohama FC U18', conferencia: 'EAST', corPrimaria: '#5BA7E1', corSecundaria: '#FFFFFF' },

@@ -87,14 +87,13 @@ Defensor: d20 + Atributo Defensivo
 | Propriedade | Valor |
 |-------------|-------|
 | **Máximo** | 10 pontos |
-| **Custo por Ação** | 1 ponto (ofensiva ou defensiva) |
-| **Regeneração** | +5 no intervalo (não ultrapassa 10) |
+| **Custo por Ação** | 1 ponto por jogador envolvido no lance (atacante e defensor) |
+| **Regeneração** | +5 no intervalo para cada jogador em campo (não ultrapassa 10) |
 | **Penalidade (0 energia)** | `1d20 - 2` (sem bônus de atributo) |
 
-**Ações que consomem energia:**
+**Ações que consomem energia por jogador:**
 - Chute, Drible, Passe (ofensivas)
 - Bloqueio, Desarme, Interceptação (defensivas automáticas)
-- **Esperar** (escolha do jogador): Não consome energia
 
 ---
 
@@ -150,12 +149,6 @@ Defensor: d20 + Atributo Defensivo
 - **Se vencer**: Companheiro recebe na próxima zona
 - **Se perder**: Adversário ganha posse na mesma zona
 
-#### Esperar
-- **Efeito**: Não faz nada, não consome energia
-- **Uso**: Poupar energia estrategicamente
-
----
-
 ### 6. Tempo de Partida
 
 | Período | Duração |
@@ -202,28 +195,33 @@ Defensor: d20 + Atributo Defensivo
 ### 2. Fluxo de Partida
 
 #### Início
-1. **Sorteio**: Time da casa inicia com posse
-2. **Posição Inicial**: MC (meio-campo)
-3. **Energia Inicial**: 10 pontos para todos
+1. **Seleção de Uniforme**: antes de iniciar, usuário escolhe uniforme (primário/secundário) de ambos os times
+2. **Sorteio**: Time da casa inicia com posse
+3. **Posição Inicial**: MC (meio-campo), com pontapé inicial priorizando MF/FW
+4. **Energia Inicial**: 10 pontos para todos
 
 #### Loop de Jogo (por minuto)
 ```
 Para cada minuto (1 até 90 + acréscimos):
   
   SE protagonista COM posse:
-    1. Mostrar opções: Chute / Drible / Passe / Esperar
+    1. Mostrar opções: Chute / Drible / Passe
     2. Jogador escolhe ação
     3. Se Passe: Mostrar menu de companheiros
     4. Resolver confronto (d20 + atributo)
-    5. Atualizar posse, zona, energia (-1)
+    5. Atualizar posse, zona e energia dos jogadores envolvidos (-1 cada)
     6. Se gol: Atualizar placar, reiniciar no MC
   
-  SE protagonista SEM posse:
+  SE protagonista SEM posse (ou não estiver em campo):
     1. IA decide ação ofensiva
-    2. Protagonista defende automaticamente (baseado em mapeamento)
+    2. Jogadores envolvidos são escolhidos automaticamente
     3. Resolver confronto
-    4. Atualizar posse, zona, energia (-1)
+    4. Atualizar posse, zona e energia dos jogadores envolvidos (-1 cada)
     5. Se gol: Atualizar placar, reiniciar no MC
+
+  Obs:
+    - Há delay narrativo de 2s entre lances no log
+    - Existe opção "Pular para resultado" para simular o restante da partida
   
   SE minuto == 45 + acréscimos 1º:
     → INTERVALO (regenera +5 energia, max 10)
@@ -236,12 +234,29 @@ Para cada minuto (1 até 90 + acréscimos):
 
 **Estratégia de Decisão** (ordem de prioridade):
 1. **Se em DF2**: Sempre chutar (chance de gol)
-2. **Se energia baixa (<3)**: Preferir Esperar
-3. **Se perdendo e tempo < 10min**: Arriscar dribles
-4. **Se vencendo e tempo < 10min**: Preferir passes seguros
-5. **Caso contrário**: Escolha aleatória ponderada (40% drible, 40% passe, 20% esperar)
+2. **Se energia baixa (<3)**: reduzir risco (menos drible/chute forçado)
+3. **Se perdendo e tempo < 10min**: arriscar dribles/chutes
+4. **Se vencendo e tempo < 10min**: preferir passes seguros
+5. **Caso contrário**: escolha ponderada entre chute/drible/passe
 
 **Defesa**: Sempre automática baseada no mapeamento.
+
+#### Narrativa dos Lances (log)
+- O log deve evidenciar atacante e defensor em cada confronto.
+- Os nomes dos jogadores devem aparecer com a cor do uniforme selecionado do respectivo time.
+- Exemplos:
+  - `O passe de JogadorX foi interceptado por JogadorY!`
+  - `O JogadorX driblou JogadorY!`
+  - `O JogadorX passou a bola para JogadorY com sucesso!`
+  - `O JogadorX bloqueou o chute de JogadorY.`
+
+#### Visualização de Escalação em Partida
+- Abaixo do card principal da partida, exibir dois cards lado a lado (quando houver espaço).
+- Cada card mostra os titulares do time correspondente com:
+  - número da camisa
+  - nome
+  - posição
+  - estamina atual
 
 ---
 
