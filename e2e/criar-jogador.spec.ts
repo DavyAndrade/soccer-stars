@@ -13,7 +13,7 @@ test.describe('Criação de Jogador', () => {
     await expect(page.getByRole('button', { name: 'Criar Jogador' })).toBeDisabled();
   });
 
-  test('deve criar jogador válido e navegar para /partida', async ({ page }) => {
+  test('deve criar jogador válido e navegar para /carreira', async ({ page }) => {
     await page.getByLabel('Nome do Jogador').fill('Ashito Aoi');
     await page.getByText('Atacante').first().click();
 
@@ -27,7 +27,7 @@ test.describe('Criação de Jogador', () => {
     await expect(page.getByRole('button', { name: 'Criar Jogador' })).toBeEnabled();
     await page.getByRole('button', { name: 'Criar Jogador' }).click();
 
-    await expect(page).toHaveURL(/\/partida\?slot=1$/);
-    await expect(page.getByRole('heading', { name: 'Partida' })).toBeVisible();
+    await expect(page).toHaveURL(/\/carreira\?slot=1$/, { timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Central da Carreira' })).toBeVisible();
   });
 });

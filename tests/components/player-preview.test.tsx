@@ -27,6 +27,7 @@ describe('PlayerPreview', () => {
     );
 
     expect(screen.getByText(/seu nome aqui/i)).toBeInTheDocument();
+    expect(screen.getByText(/sem imagem/i)).toBeInTheDocument();
   });
 
   it('deve exibir atributos e total corretamente', () => {
@@ -42,5 +43,18 @@ describe('PlayerPreview', () => {
     expect(screen.getByText((_, el) => el?.textContent === 'Rapidez: 2')).toBeInTheDocument();
     expect(screen.getByText((_, el) => el?.textContent === 'Técnica: 2')).toBeInTheDocument();
     expect(screen.getByText((_, el) => el?.textContent === 'Total: 9/9')).toBeInTheDocument();
+  });
+
+  it('deve renderizar preview de imagem quando avatar for informado', () => {
+    render(
+      <PlayerPreview
+        nome="Aoi"
+        posicao="FW"
+        atributos={{ potencia: 3, rapidez: 3, tecnica: 3 }}
+        avatar="data:image/png;base64,ZmFrZS1pbWFnZQ=="
+      />
+    );
+
+    expect(screen.getByAltText(/preview da aparência do jogador/i)).toBeInTheDocument();
   });
 });

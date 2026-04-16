@@ -1,17 +1,20 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { CriarJogadorForm } from '@/components/jogador/criar-jogador-form';
-import { createCareerFromPlayer, saveCareerSlot } from '@/lib/storage';
+import { createCareerFromPlayer, loadCareerSlot, saveCareerSlot } from '@/lib/storage';
 import { usePlayerStore } from '@/store/player-store';
 import type { CreatePlayerInput } from '@/schemas/player-schema';
 
 interface CriarJogadorClientProps {
   slotId: 1 | 2 | 3;
+  mode: 'new' | 'edit';
 }
 
-export function CriarJogadorClient({ slotId }: CriarJogadorClientProps) {
+export function CriarJogadorClient({ slotId, mode }: CriarJogadorClientProps) {
   const router = useRouter();
+  const existingSave = useMemo(() => loadCareerSlot(slotId), [slotId]);
   const {
     setNome,
     setPosicao,
@@ -33,15 +36,25 @@ export function CriarJogadorClient({ slotId }: CriarJogadorClientProps) {
     setNacionalidade(data.nacionalidade);
     setIdade(data.idade);
 
-    const career = createCareerFromPlayer(data, slotId);
+    const career = mode === 'edit' && existingSave
+      ? {
+        ...existingSave,
+        protagonista: data,
+        updatedAt: new Date().toISOString(),
+      }
+      : createCareerFromPlayer(data, slotId);
     saveCareerSlot(slotId, career);
 
-    router.push(`/partida?slot=${slotId}`);
+    router.push(`/carreira?slot=${slotId}`);
   };
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-4 py-8">
-      <CriarJogadorForm onSubmit={handleCreatePlayer} />
+      <CriarJogadorForm
+        onSubmit={handleCreatePlayer}
+        initialData={mode === 'edit' ? existingSave?.protagonista : undefined}
+        submitLabel={mode === 'edit' ? 'Salvar Alterações' : 'Criar Jogador'}
+      />
     </main>
   );
 }

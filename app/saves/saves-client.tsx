@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadSaveSlots } from '@/lib/storage';
+import { deleteCareerSlot, loadSaveSlots } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 
 type Mode = 'new' | 'continue';
@@ -13,7 +13,7 @@ interface SavesClientProps {
 
 export function SavesClient({ mode }: SavesClientProps) {
   const router = useRouter();
-  const data = useMemo(() => loadSaveSlots(), []);
+  const [data, setData] = useState(() => loadSaveSlots());
 
   const handleSelectSlot = (slot: 1 | 2 | 3) => {
     const save = data.slots[slot - 1];
@@ -24,8 +24,19 @@ export function SavesClient({ mode }: SavesClientProps) {
     }
 
     if (save) {
-      router.push(`/partida?slot=${slot}`);
+      router.push(`/carreira?slot=${slot}`);
     }
+  };
+
+  const handleDeleteSlot = (slot: 1 | 2 | 3) => {
+    const save = data.slots[slot - 1];
+    if (!save) return;
+
+    const confirmDelete = window.confirm(`Excluir o save do Slot ${slot}? Essa ação não pode ser desfeita.`);
+    if (!confirmDelete) return;
+
+    deleteCareerSlot(slot);
+    setData(loadSaveSlots());
   };
 
   return (
@@ -53,17 +64,25 @@ export function SavesClient({ mode }: SavesClientProps) {
                 <p className="mt-2 text-sm text-muted-foreground">Vazio</p>
               )}
 
-              <Button
-                className="mt-4 w-full"
-                variant={mode === 'new' ? 'default' : 'outline'}
-                disabled={disabled}
-                onClick={() => handleSelectSlot(slot as 1 | 2 | 3)}
-              >
-                {mode === 'new' ? 'Usar Slot' : 'Continuar'}
-              </Button>
-            </section>
-          );
-        })}
+                <Button
+                  className="mt-4 w-full"
+                  variant={mode === 'new' ? 'default' : 'outline'}
+                  disabled={disabled}
+                  onClick={() => handleSelectSlot(slot as 1 | 2 | 3)}
+                >
+                  {mode === 'new' ? 'Usar Slot' : 'Continuar'}
+                </Button>
+                <Button
+                  className="mt-2 w-full"
+                  variant="destructive"
+                  disabled={isEmpty}
+                  onClick={() => handleDeleteSlot(slot as 1 | 2 | 3)}
+                >
+                  Excluir Save
+                </Button>
+              </section>
+            );
+          })}
       </div>
     </main>
   );

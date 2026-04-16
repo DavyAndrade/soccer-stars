@@ -191,6 +191,12 @@ export function loadCareerSlot(slotId: SaveSlotId): CareerSave | null {
   return current.slots[slotId - 1];
 }
 
+export function deleteCareerSlot(slotId: SaveSlotId): void {
+  const current = loadSaveSlots();
+  current.slots[slotId - 1] = null;
+  saveSaveSlots(current);
+}
+
 export function createCareerFromPlayer(player: PlayerData, slotId: SaveSlotId): CareerSave {
   const teams = getInitialTeams();
   return {

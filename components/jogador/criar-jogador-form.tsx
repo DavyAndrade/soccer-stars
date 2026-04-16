@@ -16,12 +16,19 @@ import { getInitialTeams } from '@/data/teams';
 
 interface CriarJogadorFormProps {
   onSubmit: (data: CreatePlayerInput) => void | Promise<void>;
+  initialData?: CreatePlayerInput;
+  submitLabel?: string;
 }
 
-export function CriarJogadorForm({ onSubmit }: CriarJogadorFormProps) {
+export function CriarJogadorForm({
+  onSubmit,
+  initialData,
+  submitLabel = 'Criar Jogador',
+}: CriarJogadorFormProps) {
   const teams = useMemo(() => getInitialTeams(), []);
   const defaultTeam = teams[0];
   const defaultNumeroCamisa = defaultTeam?.numerosDisponiveis[0] ?? 30;
+  const initialTeam = initialData ? teams.find((team) => team.id === initialData.timeId) : undefined;
 
   const {
     handleSubmit,
@@ -32,13 +39,14 @@ export function CriarJogadorForm({ onSubmit }: CriarJogadorFormProps) {
     resolver: zodResolver(CreatePlayerSchema),
     mode: 'onChange',
     defaultValues: {
-      nome: '',
-      posicao: 'MF',
-      timeId: defaultTeam?.id ?? '',
-      numeroCamisa: defaultNumeroCamisa,
-      nacionalidade: 'Japão',
-      idade: 15,
-      atributos: {
+      nome: initialData?.nome ?? '',
+      posicao: initialData?.posicao ?? 'MF',
+      timeId: initialData?.timeId ?? defaultTeam?.id ?? '',
+      numeroCamisa: initialData?.numeroCamisa ?? initialTeam?.numerosDisponiveis[0] ?? defaultNumeroCamisa,
+      nacionalidade: initialData?.nacionalidade ?? 'Japão',
+      idade: initialData?.idade ?? 15,
+      avatar: initialData?.avatar,
+      atributos: initialData?.atributos ?? {
         potencia: 1,
         rapidez: 1,
         tecnica: 1,
@@ -53,13 +61,20 @@ export function CriarJogadorForm({ onSubmit }: CriarJogadorFormProps) {
   const nacionalidade = watch('nacionalidade');
   const idade = watch('idade');
   const atributos = watch('atributos');
+  const avatar = watch('avatar');
 
   const teamSelecionado = useMemo(
     () => teams.find((team) => team.id === timeId) ?? defaultTeam,
     [defaultTeam, teams, timeId]
   );
 
-  const numerosDisponiveis = teamSelecionado?.numerosDisponiveis ?? [];
+  const numerosDisponiveis = useMemo(() => {
+    const base = teamSelecionado?.numerosDisponiveis ?? [];
+    if (numeroCamisa && !base.includes(numeroCamisa)) {
+      return [...base, numeroCamisa].sort((a, b) => a - b);
+    }
+    return base;
+  }, [numeroCamisa, teamSelecionado]);
 
   const submitDisabled = useMemo(() => !isValid || isSubmitting, [isSubmitting, isValid]);
 
@@ -174,10 +189,10 @@ export function CriarJogadorForm({ onSubmit }: CriarJogadorFormProps) {
             onChange={(value) => setValue('atributos', value, { shouldValidate: true, shouldDirty: true })}
           />
 
-          <PlayerPreview nome={nome} posicao={posicao} atributos={atributos} />
+          <PlayerPreview nome={nome} posicao={posicao} atributos={atributos} avatar={avatar} />
 
           <Button className="w-full min-h-11" type="submit" disabled={submitDisabled}>
-            Criar Jogador
+            {submitLabel}
           </Button>
         </form>
       </CardContent>
