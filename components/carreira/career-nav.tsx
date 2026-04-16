@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { House, LayoutDashboard, Shield, Swords } from 'lucide-react';
+import { House, LayoutDashboard, Shield, Swords, Table2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface CareerNavProps {
   slot: 1 | 2 | 3;
-  current: 'hub' | 'team';
+  current: 'hub' | 'team' | 'league';
   teamPrimary?: string;
 }
 
@@ -56,6 +56,15 @@ export function CareerNav({ slot, current, teamPrimary = '#3f3f46' }: CareerNavP
           Time
         </Button>
 
+        <Button
+          className="justify-start gap-2 md:h-12 md:px-4 md:text-base"
+          variant={current === 'league' ? 'default' : 'outline'}
+          onClick={() => router.push(`/carreira/liga?slot=${slot}`)}
+        >
+          <Table2 className="h-4 w-4" />
+          Liga
+        </Button>
+
         <Button className="justify-start gap-2 md:h-12 md:px-4 md:text-base" variant="outline" onClick={() => router.push(`/partida?slot=${slot}`)}>
           <Swords className="h-4 w-4" />
           Partida
@@ -71,7 +80,7 @@ export function CareerNav({ slot, current, teamPrimary = '#3f3f46' }: CareerNavP
         className="fixed right-0 bottom-0 left-0 z-40 border-t border-border bg-background/95 px-2 py-2 backdrop-blur md:hidden"
         style={mobileStyle}
       >
-        <div className="mx-auto grid max-w-2xl grid-cols-4 gap-2">
+        <div className="mx-auto grid max-w-3xl grid-cols-5 gap-2">
           <Button
             size="sm"
             className="h-auto flex-col gap-1 py-2"
@@ -89,6 +98,15 @@ export function CareerNav({ slot, current, teamPrimary = '#3f3f46' }: CareerNavP
           >
             <Shield className="h-4 w-4" />
             Time
+          </Button>
+          <Button
+            size="sm"
+            className="h-auto flex-col gap-1 py-2"
+            variant={current === 'league' ? 'default' : 'outline'}
+            onClick={() => router.push(`/carreira/liga?slot=${slot}`)}
+          >
+            <Table2 className="h-4 w-4" />
+            Liga
           </Button>
           <Button size="sm" className="h-auto flex-col gap-1 py-2" variant="outline" onClick={() => router.push(`/partida?slot=${slot}`)}>
             <Swords className="h-4 w-4" />

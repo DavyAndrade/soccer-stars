@@ -101,4 +101,35 @@ describe('career round simulation', () => {
     expect(standings).toHaveLength(12);
     expect(standings.every((row) => row.pj === 1)).toBe(true);
   });
+
+  it('vira automaticamente para a próxima temporada ao concluir a rodada 22', () => {
+    const save = createCareerFromPlayer(playerData, 1);
+    saveCareerSlot(1, {
+      ...save,
+      liga: {
+        ...save.liga,
+        rodadaAtual: 22,
+      },
+    });
+
+    const updated = finalizeCareerRound(1, 2, 0);
+    expect(updated).toBeTruthy();
+    if (!updated) return;
+
+    expect(updated.temporadaAtual).toBe(2);
+    expect(updated.liga.rodadaAtual).toBe(1);
+    expect(updated.liga.resultados).toHaveLength(0);
+    expect(updated.historicoFinais).toHaveLength(1);
+
+    const final = updated.historicoFinais[0];
+    expect(final).toBeTruthy();
+    if (!final) return;
+
+    const eastTeam = updated.liga.times.find((time) => time.id === final.timeEastId);
+    const westTeam = updated.liga.times.find((time) => time.id === final.timeWestId);
+    expect(eastTeam?.conferencia).toBe('EAST');
+    expect(westTeam?.conferencia).toBe('WEST');
+    expect(final.temporada).toBe(1);
+    expect([final.timeEastId, final.timeWestId]).toContain(final.campeaoId);
+  });
 });

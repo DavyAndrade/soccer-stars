@@ -8,7 +8,7 @@
 
 **Nome**: Soccer Stars  
 **Tipo**: RPG de futebol single-player baseado em turnos  
-**Arquitetura**: Next.js 16 (App Router) + Phaser.js + Zustand  
+**Arquitetura**: Next.js 16 (App Router) + React-first Runtime + Zustand  
 **Princípio Core**: **MOBILE FIRST** - Interface otimizada para dispositivos móveis com suporte a desktop. Persistência local via LocalStorage (sem backend no MVP).
 
 ### Objetivo
@@ -30,7 +30,7 @@ SoccerStars/
 ├── app/                      # Next.js App Router
 │   ├── page.tsx             # Tela inicial
 │   ├── criar-jogador/       # Criação de protagonista
-│   ├── partida/             # Cena de jogo Phaser
+│   ├── partida/             # Fluxo de partida (React-first)
 │   └── liga/                # Tabela e resultados
 │
 ├── components/              # Componentes React
@@ -39,7 +39,7 @@ SoccerStars/
 │   ├── partida/             # HUD, controles, placar
 │   └── liga/                # Tabelas, classificação
 │
-├── game/                    # Phaser.js (lógica de jogo)
+├── game/                    # Opcional/futuro (Phaser pausado no escopo atual)
 │   ├── scenes/              # Cenas (MenuScene, PartidaScene)
 │   ├── entities/            # Jogador, Bola, Campo
 │   └── config.ts            # Configuração do Phaser
@@ -77,7 +77,7 @@ SoccerStars/
 | Next.js 16 | Framework React com App Router |
 | React 19 | Biblioteca UI |
 | TypeScript 5 | Type safety |
-| Phaser.js 3.x | Game engine 2D |
+| React-first Runtime | Fluxo de partida e UI |
 | Zustand | State management |
 | Zod | Validação de schemas |
 | Tailwind CSS v4 | Estilização |
@@ -102,15 +102,14 @@ Maior vence | Empate = Re-rolar
 - Passe → Interceptação
 
 ### Atributos de Jogador
-- **6 Atributos**: Chute, Drible, Passe, Bloqueio, Desarme, Interceptação
-- **Distribuição**: 1 ponto obrigatório em cada (6 pontos) + **12 pontos livres** = 18 total
+- **3 Atributos**: Potência, Rapidez, Técnica
+- **Distribuição**: 1 ponto obrigatório em cada (3 pontos) + **6 pontos livres** = 9 total
 - **Limites**: Mínimo 1, Máximo 5 por atributo
 
 ### Atributos de Goleiro
-- **2 Atributos**: Captura, Espalme
-- **Distribuição**: 6 pontos totais
-- **Captura**: Vencedor mantém posse + pode passar para zona MI
-- **Espalme**: Bola sobra 50/50 para qualquer time
+- Usa os mesmos 3 atributos com mecânica especial:
+  - **Espalme**: `d20 + floor((Potência + Rapidez) / 2)`
+  - **Captura**: `d20 + floor((Potência + Técnica) / 2)`
 
 ### Sistema de Energia
 - **Máximo**: 10 pontos
@@ -149,7 +148,7 @@ DF1 ← MI1 ← MC → MI2 → DF2
 ```
 1. Nome (input texto)
 2. Posição (GK, DF, MF, FW)
-3. Distribuição de Atributos (12 pontos livres, validado por Zod)
+3. Distribuição de Atributos (9 pontos totais: 3 obrigatórios + 6 livres)
 4. Upload de Avatar (max 10MB, múltiplos formatos)
 5. Escolha de Time (dentre 12 pré-definidos)
 6. Número de Camisa (atribuído aleatoriamente dentre disponíveis)
@@ -173,6 +172,13 @@ DF1 ← MI1 ← MC → MI2 → DF2
 - **Estratégica**: Tomar decisões baseadas em posição, energia, placar e tempo restante
 - **Defesa Automática**: Responde automaticamente à ação ofensiva do jogador
 - **Companheiro de Time**: Escolhido aleatoriamente dentre jogadores que podem atuar na zona de destino do passe
+- **Marcação**: Escolha aleatória ponderada por prioridade de zona e estamina
+- **Posse**: Sem prioridade fixa do protagonista
+
+### 4. Temporada
+- `temporadaAtual` controlada no save de carreira
+- Rodada 22 concluída inicia automaticamente a próxima temporada
+- UX específica de encerramento/início de temporada segue como evolução
 
 ---
 
@@ -191,11 +197,10 @@ DF1 ← MI1 ← MC → MI2 → DF2
 - **Stores**: `useCamelCaseStore`
 - **Phaser Scenes**: `PascalCaseScene`
 
-### Phaser + React
-- **CRÍTICO**: Phaser SEMPRE `"use client"` (nunca em Server Components)
-- **Bridge**: Zustand conecta Phaser ↔ React
-- **Proibido**: Armazenar objetos Phaser (GameObjects, Scenes) no Zustand — apenas primitivos
-- **Inicialização**: Phaser apenas após `useEffect` (evitar SSR)
+### Runtime de Partida
+- **Atual**: React-first em `app/partida/`
+- **Proibido**: Armazenar objetos de engine/render no Zustand — apenas primitivos
+- **Phaser**: opcional/futuro; se reativado, usar apenas em cliente (`"use client"`)
 
 ### Estado (Zustand)
 - **match-store.ts**: Placar, posse, energia, tempo, zona atual
@@ -254,15 +259,12 @@ bun run test:e2e   # Testes end-to-end (futuro)
 ```typescript
 // Validação Zod obrigatória
 const PlayerAttributesSchema = z.object({
-  chute: z.number().min(1).max(5),
-  drible: z.number().min(1).max(5),
-  passe: z.number().min(1).max(5),
-  bloqueio: z.number().min(1).max(5),
-  desarme: z.number().min(1).max(5),
-  interceptacao: z.number().min(1).max(5),
+  potencia: z.number().min(1).max(5),
+  rapidez: z.number().min(1).max(5),
+  tecnica: z.number().min(1).max(5),
 }).refine(
-  (attrs) => Object.values(attrs).reduce((a, b) => a + b) === 18,
-  { message: "Total de atributos deve ser 18" }
+  (attrs) => Object.values(attrs).reduce((a, b) => a + b) === 9,
+  { message: "Total de atributos deve ser 9" }
 );
 ```
 
@@ -276,7 +278,7 @@ const PlayerAttributesSchema = z.object({
 3. **Tipos**: Adicionar em `types/` se necessário
 4. **Validação**: Schema Zod em `schemas/`
 5. **Estado**: Atualizar Zustand store se necessário
-6. **Integração**: Conectar Phaser Scene ou componente React
+6. **Integração**: Conectar em `app/partida/` e componentes React
 
 ### Adicionando Componente UI
 1. Verificar primitivos em `components/ui/`
@@ -298,8 +300,8 @@ bun add -d <pkg>  # Dependência dev
 ## ❌ Proibições Absolutas
 
 ### Nunca Fazer:
-- ❌ Armazenar objetos Phaser (GameObjects, Scenes) no Zustand
-- ❌ Usar Phaser em Server Components (sempre `"use client"`)
+- ❌ Armazenar objetos de engine/render no Zustand
+- ❌ Se Phaser for reativado, usar em Server Components
 - ❌ Substituir Bun por npm/yarn/pnpm
 - ❌ Pular validação Zod em inputs de usuário
 - ❌ Gerar teste + implementação no mesmo passo (TDD obrigatório)
@@ -329,12 +331,11 @@ bun add -d <pkg>  # Dependência dev
 - Documentação (GDD, CLAUDE.md, GEMINI.md)
 
 ### Próximos Passos 🚧
-1. Schemas Zod (`player-schema.ts`, `match-schema.ts`)
-2. Stores Zustand (`match-store.ts`, `player-store.ts`, `league-store.ts`)
-3. Lógica de combate (`lib/combat.ts`) — **TDD obrigatório**
-4. IA dos NPCs (`lib/ai.ts`)
-5. UI de criação de jogador (`components/jogador/criar-jogador.tsx`)
-6. Phaser Scene de partida (`game/scenes/partida-scene.ts`)
+1. Cobrir hotfixes críticos com E2E (`/carreira/time` e `/partida`)
+2. Validar manualmente fluxo de autosave e escalação
+3. Consolidar UI da liga
+4. Criar UX de encerramento/início de temporada
+5. Revisar documentação para consistência (milestones, gdd, guias)
 
 ### Decisões Técnicas
 - **Liga**: Prince Takamado JFA U-18 Premier League (EAST + WEST)

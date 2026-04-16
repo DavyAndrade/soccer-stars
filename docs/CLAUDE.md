@@ -11,7 +11,7 @@ Soccer Stars é uma aplicação Next.js 16 (App Router) de RPG de futebol single
 | Camada | Tecnologia | Localização |
 |---|---|---|
 | Framework | Next.js 16, React 19, TypeScript | `app/` |
-| Game Engine | Phaser.js 3.x | `game/` |
+| Runtime de Partida (atual) | React/Next + lógica em `lib/` | `app/partida/`, `lib/` |
 | Estado da partida | Zustand | `store/` |
 | Validação | Zod | `schemas/` |
 | UI components | Tailwind CSS v4 | `components/` |
@@ -25,8 +25,8 @@ Browser
   ├── React Components (components/) → UI/Menus
   │     └── Zustand Store (store/) → Estado compartilhado
   │           └── LocalStorage → Persistência
-  └── Phaser Scene (game/) → Renderização e lógica de partida
-        └── Zustand Store (store/) → Sincronização com React
+  └── Runtime de partida em React (`app/partida/`) → lógica em `lib/`
+        └── Zustand Store (store/) → Sincronização de estado
 ```
 
 ### Responsabilidades das Pastas
@@ -36,14 +36,14 @@ Browser
 ├── app/                   Next.js App Router (páginas e layouts)
 │   ├── page.tsx          Tela inicial
 │   ├── criar-jogador/    Criação de protagonista
-│   ├── partida/          Cena de jogo Phaser
+│   ├── partida/          Partida (React-first)
 │   └── liga/             Tabela e resultados
 ├── components/           Componentes React reutilizáveis
 │   ├── ui/               Primitivos (Botão, Input, Modal)
 │   ├── jogador/          Criação e perfil de jogador
 │   ├── partida/          HUD, controles de ação, placar
 │   └── liga/             Tabelas, classificação
-├── game/                 Phaser.js scenes e lógica de jogo
+├── game/                 Opcional/futuro (Phaser pausado no escopo atual)
 │   ├── scenes/           Cenas (MenuScene, PartidaScene)
 │   ├── entities/         Jogador, Bola, Campo
 │   └── config.ts         Configuração do Phaser
@@ -57,7 +57,7 @@ Browser
 │   ├── player-store.ts   Protagonista e progresso
 │   └── league-store.ts   Liga, classificação, resultados
 ├── schemas/              Zod schemas para validação
-│   ├── player-schema.ts  Validação de atributos (12 pontos livres)
+│   ├── player-schema.ts  Validação de atributos (9 pontos totais)
 │   └── match-schema.ts   Validação de ações
 ├── types/                TypeScript interfaces e tipos
 │   ├── player.ts         Player, Goalkeeper, Attributes
@@ -72,7 +72,7 @@ Dependências devem fluir **para dentro**: camadas externas podem importar de ca
 
 ```
 components/ → store/ → lib/ → types/ / schemas/
-game/       → store/ → lib/ → types/ / schemas/
+game/       → store/ → lib/ → types/ / schemas/ (somente se Phaser for reativado)
 ```
 
 - `lib/` (combat, ai, dice) não deve importar de `components/`, `game/`, ou `store/`.
@@ -120,6 +120,15 @@ DF1 ← MI1 ← MC → MI2 → DF2
 - **Intervalo**: 45 minutos + acréscimos do 1º tempo
 - **Ações**: 1 ação por minuto (se com posse)
 
+### IA de Confronto (escopo atual)
+- Sem prioridade fixa do protagonista para posse.
+- Seleção de marcador por prioridade de zona (aleatório ponderado), não pelo atributo defensivo da ação.
+
+### Temporadas
+- `temporadaAtual` e `advanceSeason` ativos no storage.
+- Virada automática para a próxima temporada ao concluir a rodada 22.
+- Tela/UX de encerramento de temporada ainda é evolução pendente.
+
 ### Posições e Zonas
 | Zona | Posições Possíveis |
 |------|-------------------|
@@ -131,7 +140,7 @@ DF1 ← MI1 ← MC → MI2 → DF2
 
 ### Goleiro
 - **Atributos**: Captura (mantém posse + pode passar para MI) | Espalme (bola sobra 50/50)
-- **Pontos**: 6 totais para distribuir
+- **Regra**: Usa os mesmos 3 atributos base com cálculo específico para Captura/Espalme
 
 ---
 
@@ -156,17 +165,16 @@ DF1 ← MI1 ← MC → MI2 → DF2
 - Usar Tailwind para estilização — preferir classes utilitárias sobre CSS customizado.
 - Usar variáveis CSS definidas em `globals.css` para theming.
 
-### Phaser
-- **CRÍTICO**: Phaser DEVE rodar apenas no cliente (`"use client"`).
-- **Nunca** armazenar objetos Phaser (GameObjects, Scenes) no Zustand — apenas primitivos (numbers, strings, booleans).
-- Usar Zustand como ponte entre Phaser e React.
-- Inicializar Phaser apenas após montagem do componente (`useEffect`).
+### Engine de Partida (escopo atual)
+- **Atual**: Implementação React-first em `app/partida/` com lógica em `lib/`.
+- **Phaser**: Pausado temporariamente; tratar `game/` como opcional.
+- **Se Phaser for reativado**: rodar somente no cliente (`"use client"`) e nunca armazenar objetos de engine no Zustand.
 
 ### Estado
 - **Estado da partida** (placar, posse, energia, tempo) → Zustand (`match-store.ts`)
 - **Estado do jogador** (atributos, nome, avatar, time) → Zustand (`player-store.ts`) + LocalStorage
 - **Estado da liga** (classificação, resultados) → Zustand (`league-store.ts`)
-- Nunca armazenar objetos Phaser no Zustand. Nunca armazenar estado de UI temporário em LocalStorage.
+- Nunca armazenar objetos de engine/render no Zustand. Nunca armazenar estado de UI temporário em LocalStorage.
 
 ---
 
@@ -191,13 +199,13 @@ DF1 ← MI1 ← MC → MI2 → DF2
 2. Adicionar tipos em `types/` se necessário.
 3. Adicionar validação Zod em `schemas/` se necessário.
 4. Atualizar Zustand store em `store/` se necessário.
-5. Integrar na Phaser Scene em `game/scenes/`.
+5. Integrar no fluxo de partida em `app/partida/`.
 6. **TDD obrigatório** (ver seção abaixo).
 
 ### Adicionando um novo componente UI
 1. Verificar se um componente base em `components/ui/` já cobre a necessidade.
 2. Se não, criar em `components/` no subfolder relevante.
-3. Usar Zustand para estado compartilhado com Phaser.
+3. Usar Zustand para estado compartilhado com o fluxo de partida.
 4. Implementar no Tailwind CSS.
 
 ### Modificando lógica de combate
@@ -222,8 +230,8 @@ bun add -d <package>     # dependência de dev
 
 ## ❌ Coisas que Claude NÃO DEVE Fazer
 
-- Não armazenar objetos Phaser (GameObjects, Scenes, Sprites) no Zustand — apenas primitivos.
-- Não usar Phaser em Server Components — sempre `"use client"`.
+- Não armazenar objetos de engine/render no Zustand — apenas primitivos.
+- Se Phaser for reativado, não usar em Server Components — sempre `"use client"`.
 - Não substituir `bun` por `npm`, `yarn`, ou `pnpm` em qualquer script ou instrução.
 - Não pular validação Zod em inputs de usuário (distribuição de atributos, upload de avatar).
 - Não commitar arquivos de ambiente (`.env.local`) — apenas `.env.local.example`.
@@ -271,8 +279,8 @@ Ao trabalhar em um problema específico:
 ## 📝 Contexto Atual do Projeto
 
 ### Progresso
-- ✅ **Fase 1 (Parcial)**: Estrutura criada, tipos definidos, GDD documentado
-- ⏳ **Próximo**: Schemas Zod, stores Zustand, lógica de combate, UI de criação de jogador
+- ✅ **Fase 1 e 2**: Fundação + Core Logic concluídos
+- 🚧 **Atual**: Estabilização de carreira/partida em React-first
 
 ### Decisões Técnicas
 - **12 times na liga por conferência** (EAST + WEST, 24 times totais)

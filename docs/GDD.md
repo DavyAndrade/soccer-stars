@@ -1,8 +1,10 @@
 # 📘 Game Design Document - Soccer Stars
 
-> **Versão**: 1.0.0  
-> **Última Atualização**: 02/04/2026  
-> **Status**: Desenvolvimento Inicial
+> **Versão**: 1.1.0  
+> **Última Atualização**: 16/04/2026  
+> **Status**: Em desenvolvimento (React-first)
+
+> **Nota de Escopo Atual**: Phaser está pausado temporariamente. O fluxo de partida atual é implementado em React/Next com lógica em `lib/`.
 
 ---
 
@@ -120,7 +122,7 @@ Defensor: d20 + Atributo Defensivo
 | **MI2** | MF, FW |
 | **DF2** | MF, FW |
 
-**Regra**: Quando há confronto, a IA prioriza defensores mais aptos ao duelo (atributo defensivo da jogada + estamina), respeitando as posições válidas da zona.
+**Regra**: Quando há confronto, a marcação é escolhida de forma aleatória ponderada por prioridade de zona e estamina, respeitando as posições válidas da zona.
 
 ---
 
@@ -178,8 +180,8 @@ Defensor: d20 + Atributo Defensivo
    - FW (Forward/Atacante)
 
 #### Distribuição de Atributos
-- **Se Jogador de Campo**: 12 pontos livres (+ 6 obrigatórios = 18 total)
-- **Se Goleiro**: 6 pontos para distribuir entre Captura e Espalme
+- **Todos os jogadores**: 9 pontos totais (3 obrigatórios + 6 livres)
+- **Limites por atributo**: mínimo 1, máximo 5
 
 #### Avatar
 - **Upload**: Imagem do dispositivo
@@ -240,6 +242,8 @@ Para cada minuto (1 até 90 + acréscimos):
 3. **Placar + tempo**: perdendo no fim aumenta risco (principalmente chute); vencendo no fim prioriza segurança
 4. **Atributos**: Potência favorece chute, Rapidez favorece drible, Técnica favorece passe
 5. **Seleção final**: ponderação com tendência a escolher a ação claramente dominante
+
+**Prioridade de posse**: o protagonista não recebe prioridade fixa para ser sempre o portador da bola.
 
 **Defesa**: Sempre automática baseada no mapeamento.
 
@@ -308,6 +312,7 @@ Para cada minuto (1 até 90 + acréscimos):
 #### Progressão do Protagonista
 - O jogador criado entra em um time de uma das conferências (EAST ou WEST)
 - Disputa a fase regular (22 partidas)
+- Ao concluir a rodada 22, o jogo inicia automaticamente a próxima temporada (temporada +1)
 - Se seu time ficar em 1º lugar, disputa a FINAL contra o 1º da outra conferência
 
 ---
@@ -319,7 +324,7 @@ Para cada minuto (1 até 90 + acréscimos):
 |--------|-----------|
 | Framework | Next.js 16 (App Router) |
 | UI Library | React 19 |
-| Game Engine | Phaser.js 3.x |
+| Runtime de Partida (atual) | React/Next + lógica em `lib/` |
 | State Management | Zustand |
 | Validation | Zod |
 | Forms | React Hook Form |
@@ -332,7 +337,7 @@ Para cada minuto (1 até 90 + acréscimos):
 SoccerStars/
 ├── app/              # Next.js pages
 ├── components/       # React components
-├── game/             # Phaser scenes
+├── game/             # Opcional/futuro (Phaser, atualmente pausado)
 ├── lib/              # Business logic (combat, AI, dice)
 ├── store/            # Zustand stores
 ├── schemas/          # Zod schemas
@@ -406,7 +411,7 @@ SoccerStars/
 - Botão "Jogar Próxima Partida"
 
 #### 4. Tela de Partida
-- **Canvas Phaser**: Campo com 5 zonas visuais
+- **Container React**: Campo com 5 zonas visuais
 - **HUD Superior**: Placar, Tempo, Energia
 - **HUD Inferior**: Botões de ação (Chute/Drible/Passe/Esperar)
 - **Modal de Seleção**: Escolher companheiro para passe
@@ -447,7 +452,7 @@ SoccerStars/
 - [ ] Sistema de treinamento
 
 ### Polimento
-- [ ] Animações de partida (Phaser)
+- [ ] Animações de partida (React/CSS; Phaser opcional se reativado)
 - [ ] Sons e música
 - [ ] Tutoriais/onboarding
 - [ ] Redimensionamento automático de avatar (200x200px?)
@@ -455,6 +460,13 @@ SoccerStars/
 ---
 
 ## 📝 Changelog
+
+### v1.1.0 - 16/04/2026
+- ✅ Direção atualizada para React-first
+- ✅ Phaser marcado como opcional/futuro
+- ✅ Seção de criação de jogador alinhada com 3 atributos e 9 pontos totais
+- ✅ IA ajustada: sem prioridade fixa do protagonista e marcação por prioridade de zona
+- ✅ Virada automática de temporada ao concluir a rodada 22
 
 ### v1.0.0 - 02/04/2026
 - ✅ Mecânicas core definidas (combate, atributos, energia)
@@ -468,4 +480,4 @@ SoccerStars/
 
 **Documento Vivo**: Este GDD será atualizado conforme novas decisões forem tomadas.
 
-**Última Revisão**: 02/04/2026 por Claude Sonnet 4.5
+**Última Revisão**: 16/04/2026

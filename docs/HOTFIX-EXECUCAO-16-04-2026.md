@@ -47,9 +47,18 @@ Origem: pendencias de MILESTONES (fluxos /carreira/time e /partida)
 
 - Status: Implementadas, sem E2E dedicado
 - Evidencias de codigo:
-  - app/partida/partida-client.tsx: bonus de prioridade do protagonista na posse
+  - app/partida/partida-client.tsx: sem prioridade fixa do protagonista na posse
+  - app/partida/partida-client.tsx: marcador escolhido por prioridade de zona (aleatorio ponderado)
   - app/partida/partida-client.tsx: chute livre apos vencer ultimo defensor
   - app/partida/partida-client.tsx: substituicao automatica apenas apos intervalo
+
+### 6) Temporada
+
+- Status: Implementada parcialmente
+- Evidencias de codigo:
+  - lib/storage.ts: virada automatica para nova temporada ao concluir rodada 22
+- Pendente:
+  - UX/tela de encerramento e inicio de temporada
 
 ## Testes Adicionados
 

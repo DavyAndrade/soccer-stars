@@ -31,7 +31,6 @@ const PRIORIDADE_POSICAO_POR_ZONA: Record<ZonaCampo, Record<PlayerPosition, numb
   MI2: { GK: 0, DF: 0.5, MF: 2, FW: 3 },
   DF2: { GK: 0, DF: 0.2, MF: 2, FW: 3.2 },
 };
-const PROTAGONIST_POSSESSION_BONUS = 1.6;
 const ACTION_DELAY_MS = 2000;
 const SKIP_DELAY_MS = 30;
 const AUTO_SUB_THRESHOLD = 2;
@@ -69,6 +68,25 @@ function advanceZone(side: MatchTeam, zone: ZonaCampo): ZonaCampo {
 function pickRandom<T>(values: T[]): T | null {
   if (values.length === 0) return null;
   return values[Math.floor(Math.random() * values.length)] ?? null;
+}
+
+function pickWeightedRandom<T>(entries: Array<{ value: T; weight: number }>): T | null {
+  const positive = entries.filter((entry) => entry.weight > 0);
+  if (positive.length === 0) {
+    return entries[0]?.value ?? null;
+  }
+
+  const totalWeight = positive.reduce((sum, entry) => sum + entry.weight, 0);
+  let threshold = Math.random() * totalWeight;
+
+  for (const entry of positive) {
+    threshold -= entry.weight;
+    if (threshold <= 0) {
+      return entry.value;
+    }
+  }
+
+  return positive[positive.length - 1]?.value ?? null;
 }
 
 function fallbackAttributes(): PlayerAttributes {
@@ -260,10 +278,6 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       const attrs = player.atributos ?? fallbackAttributes();
       const energia = getEnergy(energiaPorJogador, player.id);
       const prioridadePosicao = PRIORIDADE_POSICAO_POR_ZONA[contexto][player.posicao] ?? 0;
-      const bonusProtagonista =
-        side === 'protagonista' && player.isProtagonista
-          ? PROTAGONIST_POSSESSION_BONUS + (contexto === 'MC' || contexto === 'MI2' || contexto === 'DF2' ? 0.6 : 0)
-          : 0;
       const bonusAtributoZona =
         contexto === 'DF1'
           ? attrs.tecnica * 0.7
@@ -274,7 +288,7 @@ export function PartidaClient({ slot }: PartidaClientProps) {
               : contexto === 'MI2'
                 ? attrs.rapidez * 0.9 + attrs.tecnica * 0.4
                 : attrs.potencia * 1 + attrs.rapidez * 0.25;
-      const score = prioridadePosicao * 4 + bonusAtributoZona + bonusProtagonista + energia * 0.35 + Math.random() * 0.35;
+        const score = prioridadePosicao * 4 + bonusAtributoZona + energia * 0.35 + Math.random() * 0.35;
       if (score > bestScore) {
         bestScore = score;
         best = player;
@@ -287,34 +301,26 @@ export function PartidaClient({ slot }: PartidaClientProps) {
   const chooseKickoffCarrier = (side: MatchTeam) =>
     chooseBallCarrier(side, 'MC', { preferredPositions: ['MF', 'FW'] });
 
-  const escolherDefensor = (defendingSide: MatchTeam, zone: ZonaCampo, action: MatchAction): TeamSquadPlayer | null => {
+  const escolherDefensor = (defendingSide: MatchTeam, zone: ZonaCampo): TeamSquadPlayer | null => {
     const pool = getTitulares(defendingSide);
     if (pool.length === 0) return null;
-    const allowed = POSICOES_POR_ZONA[zoneForSide(defendingSide, zone)] ?? ['DF', 'MF', 'FW'];
+    const contexto = zoneForSide(defendingSide, zone);
+    const allowed = POSICOES_POR_ZONA[contexto] ?? ['DF', 'MF', 'FW'];
     const candidates = pool.filter((player) => allowed.includes(player.posicao) && player.posicao !== 'GK');
     const source = candidates.length > 0 ? candidates : pool.filter((player) => player.posicao !== 'GK');
     if (source.length === 0) return pickRandom(pool);
 
-    let bestScore = Number.NEGATIVE_INFINITY;
-    let best: TeamSquadPlayer | null = null;
-    for (const player of source) {
-      const attrs = player.atributos ?? fallbackAttributes();
+    const weighted = source.map((player) => {
+      const prioridadePosicao = PRIORIDADE_POSICAO_POR_ZONA[contexto][player.posicao] ?? 0.8;
       const energia = getEnergy(energiaPorJogador, player.id);
-      const atributoDefensivo =
-        action === 'chute'
-          ? attrs.potencia
-          : action === 'drible'
-            ? attrs.rapidez
-            : attrs.tecnica;
-      const bonusPosicao = player.posicao === 'DF' ? 1.2 : player.posicao === 'MF' ? 0.5 : 0;
-      const score = atributoDefensivo * 2.2 + energia * 0.4 + bonusPosicao + Math.random() * 0.3;
-      if (score > bestScore) {
-        bestScore = score;
-        best = player;
-      }
-    }
+      const energiaFator = 0.4 + energia / 20;
+      return {
+        value: player,
+        weight: Math.max(0.1, prioridadePosicao * energiaFator),
+      };
+    });
 
-    return best;
+    return pickWeightedRandom(weighted);
   };
 
   const choosePassReceiver = (
@@ -436,7 +442,9 @@ export function PartidaClient({ slot }: PartidaClientProps) {
 
     if (nextMinute === fimPrimeiroTempo) {
       setEnergiaPorJogador((currentEnergy) => recoverAllEnergy(currentEnergy));
-      appendLog([...parts, { text: ' Intervalo: estamina recuperada em +5.' }]);
+      setZonaAtual('MC');
+      setChuteLivrePara(null);
+      appendLog([...parts, { text: ' Intervalo: estamina recuperada em +5 e bola reiniciada no meio-campo.' }]);
     } else {
       appendLog(parts);
     }
@@ -493,14 +501,16 @@ export function PartidaClient({ slot }: PartidaClientProps) {
 
     const defendingSide: MatchTeam = side === 'protagonista' ? 'adversario' : 'protagonista';
     const finalZone = zoneForSide(side, zonaAtual) === 'DF2';
-    const chuteSemBloqueio = action === 'chute' && chuteLivrePara === side && finalZone;
-    const defender = chuteSemBloqueio ? null : escolherDefensor(defendingSide, zonaAtual, action);
+    const chuteObrigatorio = chuteLivrePara === side && finalZone;
+    const acaoResolvida: MatchAction = chuteObrigatorio ? 'chute' : action;
+    const chuteSemBloqueio = acaoResolvida === 'chute' && chuteLivrePara === side && finalZone;
+    const defender = chuteSemBloqueio ? null : escolherDefensor(defendingSide, zonaAtual);
     const attackerAttrs = attacker.atributos ?? fallbackAttributes();
     const defenderAttrs = defender?.atributos ?? fallbackAttributes();
     const energiaAtacante = getEnergy(energiaPorJogador, attacker.id);
     const energiaDefensor = getEnergy(energiaPorJogador, defender?.id);
 
-    if (action === 'chute' && !canShoot(side, zonaAtual)) {
+    if (acaoResolvida === 'chute' && !canShoot(side, zonaAtual)) {
       avancarMinuto([
         { text: 'O chute de ' },
         { text: attacker.nome, side },
@@ -510,7 +520,7 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     }
 
     const isLongShot =
-      action === 'chute' &&
+      acaoResolvida === 'chute' &&
       ((side === 'protagonista' && zonaAtual === 'MI2') || (side === 'adversario' && zonaAtual === 'MI1'));
     const adjustedAttackerAttrs: PlayerAttributes = isLongShot
       ? { ...attackerAttrs, potencia: 0 }
@@ -518,7 +528,7 @@ export function PartidaClient({ slot }: PartidaClientProps) {
 
     const confronto = chuteSemBloqueio
       ? { vencedor: 'atacante' as const }
-      : executarConfronto(action, adjustedAttackerAttrs, defenderAttrs, energiaAtacante, energiaDefensor);
+      : executarConfronto(acaoResolvida, adjustedAttackerAttrs, defenderAttrs, energiaAtacante, energiaDefensor);
     setEnergiaPorJogador((current) => spendEnergy(current, [attacker.id, chuteSemBloqueio ? null : defender?.id]));
 
     if (confronto.vencedor === 'defensor') {
@@ -527,14 +537,14 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       setPortadorId(newCarrier?.id ?? defender?.id ?? null);
       setChuteLivrePara(null);
 
-      if (action === 'chute') {
+      if (acaoResolvida === 'chute') {
         avancarMinuto([
           { text: defender?.nome ?? 'defensor', side: defendingSide },
           { text: ' bloqueou o chute de ' },
           { text: attacker.nome, side },
           { text: '.' },
         ]);
-      } else if (action === 'drible') {
+      } else if (acaoResolvida === 'drible') {
         avancarMinuto([
           { text: 'O drible de ' },
           { text: attacker.nome, side },
@@ -554,7 +564,7 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       return;
     }
 
-    if (action === 'drible') {
+    if (acaoResolvida === 'drible') {
       setZonaAtual((current) => advanceZone(side, current));
       setTimeComPosse(side);
       setPortadorId(attacker.id);
@@ -568,7 +578,7 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       return;
     }
 
-    if (action === 'passe') {
+    if (acaoResolvida === 'passe') {
       const receiver = choosePassReceiver(
         side,
         zonaAtual,
@@ -664,9 +674,11 @@ export function PartidaClient({ slot }: PartidaClientProps) {
         },
         atacante.atributos ?? fallbackAttributes(),
       );
+      const chuteObrigatorio = chuteLivrePara === side && contextZone === 'DF2';
+      const acaoResolvida: MatchAction = chuteObrigatorio ? 'chute' : acaoIA;
 
       setPortadorId(atacante.id);
-      resolverAcao(side, acaoIA);
+      resolverAcao(side, acaoResolvida);
     }, pulandoParaResultado ? SKIP_DELAY_MS : ACTION_DELAY_MS);
 
     return () => window.clearTimeout(timeout);
@@ -729,9 +741,21 @@ export function PartidaClient({ slot }: PartidaClientProps) {
 
   const handleConcluirRodada = () => {
     setConcluindoRodada(true);
+    const temporadaAnterior = save?.temporadaAtual ?? null;
     const updated = finalizeCareerRound(slot, placarProtagonista, placarAdversario);
-    if (!updated) return;
+    if (!updated) {
+      setConcluindoRodada(false);
+      return;
+    }
     setSave(updated);
+
+    if (temporadaAnterior !== null && updated.temporadaAtual > temporadaAnterior) {
+      router.push(
+        `/carreira?slot=${slot}&seasonTransition=1&fromSeason=${temporadaAnterior}&toSeason=${updated.temporadaAtual}`,
+      );
+      return;
+    }
+
     router.push(`/carreira?slot=${slot}`);
   };
 
@@ -749,6 +773,8 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     ) ?? null;
   const estaminaProtagonista = getEnergy(energiaPorJogador, protagonista?.id);
   const estaminaPortador = getEnergy(energiaPorJogador, jogadorComBola?.id);
+  const protagonistaComChuteObrigatorio =
+    protagonistaTemBola && chuteLivrePara === 'protagonista' && zoneForSide('protagonista', zonaAtual) === 'DF2';
 
   const renderEscalacaoCard = (side: MatchTeam, title: string, players: TeamSquadPlayer[]) => (
     <article className="rounded-xl border border-border p-4">
@@ -780,7 +806,12 @@ export function PartidaClient({ slot }: PartidaClientProps) {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 px-4 py-6">
-      <h1 className="text-2xl font-semibold">Partida</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Partida</h1>
+        <Button variant="outline" onClick={() => router.push(`/carreira?slot=${slot}`)}>
+          Voltar para Carreira
+        </Button>
+      </div>
       {save && (
         <p className="text-sm text-muted-foreground">
           Slot {slot} • {save.protagonista.nome} • Temporada {save.temporadaAtual}
@@ -862,10 +893,18 @@ export function PartidaClient({ slot }: PartidaClientProps) {
                   <Button onClick={() => resolverAcao('protagonista', 'chute')} disabled={!canShoot('protagonista', zonaAtual)}>
                     Chute
                   </Button>
-                  <Button onClick={() => resolverAcao('protagonista', 'drible')} variant="outline">
+                  <Button
+                    onClick={() => resolverAcao('protagonista', 'drible')}
+                    variant="outline"
+                    disabled={protagonistaComChuteObrigatorio}
+                  >
                     Drible
                   </Button>
-                  <Button onClick={() => setAguardandoPasse(true)} variant="outline">
+                  <Button
+                    onClick={() => setAguardandoPasse(true)}
+                    variant="outline"
+                    disabled={protagonistaComChuteObrigatorio}
+                  >
                     Passe
                   </Button>
                 </div>

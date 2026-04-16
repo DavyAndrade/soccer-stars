@@ -48,6 +48,17 @@ const CareerSaveSchema = z.object({
       golsVisitante: z.number().int().min(0).max(99),
     })).default([]),
   }),
+  historicoFinais: z.array(
+    z.object({
+      temporada: z.number().int().min(1),
+      timeEastId: z.string(),
+      timeWestId: z.string(),
+      golsEast: z.number().int().min(0).max(99),
+      golsWest: z.number().int().min(0).max(99),
+      campeaoId: z.string(),
+      decididoNosPenaltis: z.boolean().default(false),
+    }),
+  ).default([]),
 });
 
 const SaveSlotsSchema = z.object({
@@ -57,6 +68,7 @@ const SaveSlotsSchema = z.object({
 export type CareerSave = z.infer<typeof CareerSaveSchema>;
 export type SaveSlotsState = z.infer<typeof SaveSlotsSchema>;
 export type CareerMatchResult = CareerSave['liga']['resultados'][number];
+export type CareerSeasonFinal = CareerSave['historicoFinais'][number];
 export type CareerRoundFixture = {
   rodada: number;
   conferencia: ConferenciaLiga;
@@ -276,6 +288,13 @@ export function registerCareerMatchResult(
     },
   };
 
+  if (liga.rodadaAtual >= 22) {
+    const withSeasonFinal = registerSeasonFinal(updated);
+    const nextSeason = advanceSeason(withSeasonFinal);
+    saveCareerSlot(slotId, nextSeason);
+    return nextSeason;
+  }
+
   saveCareerSlot(slotId, updated);
   return updated;
 }
@@ -383,8 +402,58 @@ export function finalizeCareerRound(
     },
   };
 
+  if (liga.rodadaAtual >= 22) {
+    const withSeasonFinal = registerSeasonFinal(updated);
+    const nextSeason = advanceSeason(withSeasonFinal);
+    saveCareerSlot(slotId, nextSeason);
+    return nextSeason;
+  }
+
   saveCareerSlot(slotId, updated);
   return updated;
+}
+
+function registerSeasonFinal(save: CareerSave): CareerSave {
+  const alreadyRegistered = save.historicoFinais.some((seasonFinal) => seasonFinal.temporada === save.temporadaAtual);
+  if (alreadyRegistered) {
+    return save;
+  }
+
+  const eastStandings = getConferenceStandings(save, 'EAST');
+  const westStandings = getConferenceStandings(save, 'WEST');
+  const eastChampion = eastStandings[0]?.time;
+  const westChampion = westStandings[0]?.time;
+  if (!eastChampion || !westChampion) {
+    return save;
+  }
+
+  const score = simulateFixtureScore(eastChampion, westChampion);
+  let campeaoId = eastChampion.id;
+  let decididoNosPenaltis = false;
+
+  if (score.golsEast > score.golsWest) {
+    campeaoId = eastChampion.id;
+  } else if (score.golsWest > score.golsEast) {
+    campeaoId = westChampion.id;
+  } else {
+    decididoNosPenaltis = true;
+    campeaoId = Math.random() < 0.5 ? eastChampion.id : westChampion.id;
+  }
+
+  const seasonFinal: CareerSeasonFinal = {
+    temporada: save.temporadaAtual,
+    timeEastId: eastChampion.id,
+    timeWestId: westChampion.id,
+    golsEast: score.golsEast,
+    golsWest: score.golsWest,
+    campeaoId,
+    decididoNosPenaltis,
+  };
+
+  return {
+    ...save,
+    historicoFinais: [...save.historicoFinais, seasonFinal],
+  };
 }
 
 function buildProtagonista(player: PlayerData, slotId: SaveSlotId): TeamSquadPlayer {
@@ -602,6 +671,10 @@ export function saveCareerSlot(slotId: SaveSlotId, save: Omit<CareerSave, 'slotI
   const current = loadSaveSlots();
   current.slots[slotId - 1] = { ...save, slotId };
   saveSaveSlots(current);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('soccer-stars:career-save-updated', { detail: { slotId } }));
+  }
 }
 
 export function loadCareerSlot(slotId: SaveSlotId): CareerSave | null {
@@ -662,6 +735,7 @@ export function createCareerFromPlayer(player: PlayerData, slotId: SaveSlotId): 
     temporadaAtual: 1,
     protagonista: player,
     liga: { times: teams, rodadaAtual: 1, resultados: [] },
+    historicoFinais: [],
   };
 }
 

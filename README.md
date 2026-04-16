@@ -8,13 +8,15 @@ Soccer Stars é um jogo web turn-based onde você controla um jogador de futebol
 
 ## 🚀 Stack Tecnológica
 
-- **Framework:** Next.js 15+ (App Router)
+- **Framework:** Next.js 16 (App Router)
 - **Linguagem:** TypeScript (strict mode)
-- **Game Engine:** Phaser.js 3.8+
+- **Runtime de Partida (atual):** React/Next + lógica em `lib/`
 - **UI:** Tailwind CSS 4 + shadcn/ui
 - **State Management:** Zustand
 - **Runtime:** Bun >=1.0 ⚡
 - **Deploy:** Vercel / Netlify
+
+> **Nota de escopo atual:** Phaser está pausado temporariamente. A implementação de partida segue em React-first.
 
 ## 📋 Pré-requisitos
 
@@ -67,7 +69,7 @@ bun run start
 
 ### Netlify
 
-1. Configure `netlify.toml` (já incluído)
+1. Configure `netlify.toml` (se optar por Netlify)
 2. Conecte seu repositório
 3. Deploy automático
 
@@ -76,6 +78,8 @@ bun run start
 - [Game Design Document (GDD)](./docs/GDD.md) - Mecânicas e regras do jogo
 - [Guia para Claude AI](./docs/CLAUDE.md) - Diretrizes de desenvolvimento para IA
 - [Guia para Gemini AI](./docs/GEMINI.md) - Diretrizes de desenvolvimento para IA
+- [Milestones](./MILESTONES.md) - Progresso por fase e próximos marcos
+- [Checklist de Hotfixes](./docs/HOTFIX-EXECUCAO-16-04-2026.md) - Execução de estabilização
 
 ## 🎯 Escopo do MVP
 
@@ -84,8 +88,11 @@ bun run start
 - ✅ Campo com 5 zonas
 - ✅ Partidas 11v11 com IA
 - ✅ Sistema de energia (10 pontos)
+- ✅ IA de confronto com marcação por prioridade de zona
+- ✅ Sem prioridade fixa do protagonista na posse
 - ✅ Goleiro com Captura/Espalme (mecânica especial)
 - ✅ 90 minutos + acréscimos
+- ✅ Virada automática de temporada após a rodada 22
 - ✅ Mobile First
 - ✅ Persistência via LocalStorage
 - ✅ Bun como runtime (v1.3.11)
@@ -110,7 +117,7 @@ SoccerStars/
 ├── lib/              # Utilitários e lógica core
 ├── store/            # Zustand stores
 ├── components/       # Componentes React
-├── game/             # Lógica Phaser.js
+├── game/             # Opcional/futuro (Phaser pausado no escopo atual)
 └── public/           # Assets estáticos
 ```
 

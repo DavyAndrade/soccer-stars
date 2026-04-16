@@ -8,6 +8,10 @@ import { CareerNav } from '@/components/carreira/career-nav';
 
 interface CarreiraClientProps {
   slot: 1 | 2 | 3;
+  seasonTransitionInfo?: {
+    fromSeason: number;
+    toSeason: number;
+  } | null;
 }
 
 const LEAGUE_NAME_BY_CONFERENCE = {
@@ -25,10 +29,10 @@ const FLAG_BY_NATIONALITY: Record<string, string> = {
 };
 
 const POSITION_LABEL: Record<string, string> = {
-  GK: 'Goleiro',
-  DF: 'Defensor',
-  MF: 'Meio-Campista',
-  FW: 'Atacante',
+  GK: 'Goleiro (GK)',
+  DF: 'Defensor (DF)',
+  MF: 'Meio-Campista (MF)',
+  FW: 'Atacante (FW)',
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -57,15 +61,20 @@ function getPositionLabel(posicao: string): string {
   return POSITION_LABEL[posicao] ?? posicao;
 }
 
-export function CarreiraClient({ slot }: CarreiraClientProps) {
+export function CarreiraClient({ slot, seasonTransitionInfo = null }: CarreiraClientProps) {
   const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
   const [save, setSave] = useState<ReturnType<typeof loadCareerSlot>>(null);
+  const [showSeasonTransition, setShowSeasonTransition] = useState(Boolean(seasonTransitionInfo));
 
   useEffect(() => {
     setSave(loadCareerSlot(slot));
     setIsHydrated(true);
   }, [slot]);
+
+  useEffect(() => {
+    setShowSeasonTransition(Boolean(seasonTransitionInfo));
+  }, [seasonTransitionInfo]);
 
   const team = useMemo(() => {
     if (!save) return null;
@@ -112,6 +121,25 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
           </p>
         </header>
 
+        {showSeasonTransition && seasonTransitionInfo ? (
+          <section className="rounded-xl border border-emerald-500/40 bg-emerald-950/20 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-emerald-200">Nova temporada iniciada</h2>
+                <p className="mt-1 text-sm text-emerald-100/90">
+                  Você concluiu a temporada {seasonTransitionInfo.fromSeason} e iniciou a temporada {seasonTransitionInfo.toSeason}.
+                </p>
+                <p className="mt-1 text-xs text-emerald-100/70">
+                  A fase regular reiniciou na rodada 1 com tabela atualizada.
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => setShowSeasonTransition(false)}>
+                Fechar
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         <section className="grid gap-4 md:grid-cols-2">
           <article className="rounded-xl border p-4" style={surfaceStyle}>
             <h2 className="text-2xl font-semibold">Meu Jogador</h2>
@@ -144,18 +172,6 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
           </article>
 
           <article className="rounded-xl border p-4" style={surfaceStyle}>
-            <h2 className="text-lg font-semibold">Atalhos</h2>
-            <div className="mt-3 flex flex-col gap-2">
-              <Button onClick={() => router.push(`/carreira/time?slot=${slot}`)}>Abrir página do Time</Button>
-              <Button variant="outline" onClick={() => router.push(`/partida?slot=${slot}`)}>
-                Ir para Partida
-              </Button>
-            </div>
-          </article>
-        </section>
-
-        <section>
-          <article className="rounded-xl border p-4" style={surfaceStyle}>
               <h2 className="text-lg font-semibold">Próxima Partida</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 {team && nextMatch
@@ -165,6 +181,18 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
             <Button className="mt-3" onClick={() => router.push(`/partida?slot=${slot}`)}>
               Jogar Partida
             </Button>
+          </article>
+        </section>
+
+        <section>
+          <article className="rounded-xl border p-4" style={surfaceStyle}>
+            <h2 className="text-lg font-semibold">Atalhos</h2>
+            <div className="mt-3 flex flex-col gap-2">
+              <Button onClick={() => router.push(`/carreira/time?slot=${slot}`)}>Abrir página do Time</Button>
+              <Button variant="outline" onClick={() => router.push(`/partida?slot=${slot}`)}>
+                Ir para Partida
+              </Button>
+            </div>
           </article>
         </section>
       </div>

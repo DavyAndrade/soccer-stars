@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getConferenceStandings, loadCareerSlot, updateTeamEscalacao } from '@/lib/storage';
+import { getConferenceStandings, loadCareerSlot, STORAGE_KEYS, updateTeamEscalacao } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { FORMACOES, type FormacaoNome, type TeamSquadPlayer, type Time } from '@/types/team';
 import { CareerNav } from '@/components/carreira/career-nav';
@@ -117,8 +117,33 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
   const [selectedForSwap, setSelectedForSwap] = useState<{ id: string; titular: boolean; nome: string } | null>(null);
 
   useEffect(() => {
-    setSave(loadCareerSlot(slot));
+    const refreshSave = () => setSave(loadCareerSlot(slot));
+    refreshSave();
     setIsHydrated(true);
+
+    const onFocus = () => refreshSave();
+    const onStorage = (event: StorageEvent) => {
+      if (!event.key || event.key === STORAGE_KEYS.SAVE_SLOTS) {
+        refreshSave();
+      }
+    };
+    const onCareerSaveUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ slotId?: number }>;
+      const eventSlotId = customEvent.detail?.slotId;
+      if (!eventSlotId || eventSlotId === slot) {
+        refreshSave();
+      }
+    };
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('soccer-stars:career-save-updated', onCareerSaveUpdated as EventListener);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('soccer-stars:career-save-updated', onCareerSaveUpdated as EventListener);
+    };
   }, [slot]);
 
   const team = useMemo(() => {
@@ -268,7 +293,7 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
         </article>
 
         <article className="rounded-xl border p-4" style={surfaceStyle}>
-          <h2 className="text-lg font-semibold">Tabela da Conferência</h2>
+          <h2 className="text-lg font-semibold">{leagueName}</h2>
           <div className="mt-3 overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>

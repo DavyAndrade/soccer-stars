@@ -8,6 +8,8 @@
 
 O Soccer Stars é ambientado na **Prince Takamado JFA U-18 Football Premier League**, uma liga real de futebol sub-18 do Japão. Esta liga é dividida em duas conferências regionais (EAST e WEST) que competem separadamente antes de um jogo final decisivo.
 
+> **Status atual de implementação:** fluxo de carreira focado na fase regular das conferências. A final EAST x WEST permanece como etapa planejada.
+
 ---
 
 ## 🗾 Estrutura da Liga
@@ -50,7 +52,7 @@ Dentro de cada conferência:
 ## 🏫 Tipos de Times
 
 ### Times Escolares (学校)
-Equipes de colégios/escolas que mantêm times de futebol competitivos.
+Times de colégios/escolas que mantêm futebol competitivo.
 
 **Características**:
 - Jogadores são estudantes regulares
@@ -59,7 +61,7 @@ Equipes de colégios/escolas que mantêm times de futebol competitivos.
 - Exemplos na vida real: Aomori Yamada, Maebashi Ikuei, Ryutsu Keizai University Kashiwa
 
 ### Times de Base (クラブユース)
-Equipes juvenis de clubes profissionais da J.League.
+Times juvenis de clubes profissionais da J.League.
 
 **Características**:
 - Jogadores em formação profissional
@@ -161,6 +163,10 @@ Exemplos de times reais elegíveis:
   - 22 rodadas por conferência
   - Sistema de final (desbloqueia se time for 1º lugar)
 
+> Nota: o fluxo de simulação de rodada já está implementado para partidas das conferências; o fechamento completo da final segue como evolução de milestone.
+
+> Nota: ao concluir a rodada 22 da fase regular, o sistema inicia automaticamente a próxima temporada.
+
 ### Geração de Rodadas
 ```typescript
 // Pseudo-código
@@ -193,5 +199,5 @@ function gerarFinal(campeaoEast: Time, campeaoWest: Time): Partida {
 
 ---
 
-**Última Atualização**: 05/04/2026  
-**Status**: Estrutura definida, times específicos pendentes de seleção
+**Última Atualização**: 16/04/2026  
+**Status**: Estrutura definida, fase regular em foco e times específicos pendentes de seleção

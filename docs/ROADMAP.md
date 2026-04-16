@@ -1,85 +1,75 @@
 # 🗺️ Soccer Stars - Roadmap de Implementação
 
-**Última Atualização**: 05/04/2026  
-**Status Atual**: Fase 3 em andamento (Game Engine base iniciada)
+**Última Atualização**: 16/04/2026  
+**Status Atual**: Carreira/Partida em estabilização (React-first)
 
 ---
 
 ## 📊 Progresso Geral
 
 ```
-✅ Fase 1: Fundação        100% (10/10)
-✅ Fase 2: Core Logic      100% (8/8)
-🚧 Fase 3: Game Engine      50% (3/6)
-🚧 Fase 4: UI/UX             0% (0/3)
-📋 Fase 5: Polish            0% (0/2)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   Total                   72% (21/29)
+✅ Fase 1: Fundação          100% (10/10)
+✅ Fase 2: Core Logic        100% (8/8)
+🚧 Fase 3: Partida (React)    80% (4/5)
+🚧 Fase 4: UI/UX              60% (2/3)
+📋 Fase 5: Polish              0% (0/2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Total                     78% (24/31)
 ```
 
 ---
 
-## 🎯 Próximas Tarefas Imediatas (Grupo 1)
+## 🎯 Prioridades Imediatas
 
-### 1. Criar estrutura de pastas
-```bash
-mkdir -p game/scenes game/entities game/utils
-mkdir -p components/ui components/jogador components/partida components/liga
-mkdir -p app/criar-jogador app/partida app/liga
-```
+### 1. Fechar validação de hotfixes
+- Validar manualmente o fluxo de troca/autosave em `/carreira/time`
+- Confirmar estabilidade visual após múltiplas trocas e mudança de formação
 
-### 2. Configurar Phaser.js
-- Criar `game/config.ts` com configuração mobile-first
-- Viewport mínimo 375px
-- Touch controls habilitados
+### 2. Cobertura E2E crítica
+- Fluxo de troca com persistência imediata
+- Substituição automática apenas no 2º tempo
+- Chute livre após vencer último defensor
+- Encerramento de partida e retorno correto para `/carreira`
 
-### 3. Criar componentes UI primitivos
-- `components/ui/button.tsx`
-- `components/ui/input.tsx`
-- `components/ui/modal.tsx`
-- `components/ui/card.tsx`
+### 3. Consolidar UI da liga
+- Tabela de conferência completa
+- Resultados por rodada
+- Fluxo de próxima partida consistente com o estado salvo
+
+### 4. Sanear documentação
+- Unificar regras de atributos (3 atributos, 9 pontos)
+- Manter Phaser como opcional/futuro
+- Garantir consistência entre `MILESTONES.md`, `docs/GDD.md`, `docs/CLAUDE.md`, `docs/GEMINI.md`
+
+### 5. Fechar ciclo de temporada
+- Estado de temporada já existe (`temporadaAtual`)
+- Função de avanço já existe (`advanceSeason`)
+- Virada automática após a 22ª rodada já implementada
+- Falta definir UX para encerramento e início da temporada seguinte
+
+### 6. Ajuste fino da IA de partida
+- Remover prioridade fixa do protagonista para posse (concluído)
+- Marcação por prioridade de zona (concluído)
+- Validar balanceamento de estamina em partidas longas (pendente)
 
 ---
 
-## 🤔 Decisões Pendentes
+## ✅ Decisões Atuais
 
-### ✅ Respondidas:
-- **Liga**: Prince Takamado JFA U-18 (EAST + WEST, 24 times - 12 por conferência)
-- **NPCs**: 23 jogadores por time, nomes genéricos
-- **Atributos**: Mudança planejada de 6 → 3 (Potência/Rapidez/Técnica)
-
-### ✅ Decisões Confirmadas (07/04/2026):
-
-#### 1. Estilo Visual do Campo
-- [x] **Retângulos coloridos simples** (MVP, mais rápido)
-
-#### 2. Sprites dos Jogadores
-- [x] **Círculos coloridos baseados nas cores do uniforme do time**
-  - Verde = protagonista
-  - Outras cores = baseado no uniforme do time adversário
-  - ⚠️ Feature pode ter alterações futuras dependendo da implementação do game
-
-#### 3. Ordem de Implementação
-- [x] **Começar por criação de jogador** (React, mais simples)
-
-#### 4. Package Manager
-- [x] **Bun instalado e verificado** (v1.3.11 ✅)
-
-#### 5. Sistema de Atributos
-- [x] **Migração para 3 atributos confirmada** (ver `docs/MUDANCAS-ATRIBUTOS.md`)
-  - Potência, Rapidez, Técnica
-  - 9 pontos totais (min 1, max 5)
-  - GK usa mesmo sistema com mecânica especial
+- Runtime/PM: **Bun** (v1.3.11)
+- Atributos: **3 atributos** (Potência, Rapidez, Técnica), **9 pontos totais**
+- Direção de implementação: **React-first** para partida
+- Phaser: **pausado temporariamente** (opcional/futuro)
 
 ---
 
 ## 📚 Documentos Importantes
 
-- **`docs/GDD.md`** - Game Design Document completo
-- **`docs/LIGA.md`** - Estrutura da Prince Takamado League
-- **`docs/MUDANCAS-ATRIBUTOS.md`** - Mudança pendente (6→3 atributos)
-- **`docs/CLAUDE.md`** - Guia para IA (guardrails, convenções)
-- **`MILESTONES.md`** - Progresso detalhado por fase
+- `MILESTONES.md` - Status principal e marcos
+- `docs/HOTFIX-EXECUCAO-16-04-2026.md` - Checklist executável dos hotfixes
+- `docs/GDD.md` - Regras e design do jogo
+- `docs/CLAUDE.md` - Guia operacional para agentes
+- `docs/GEMINI.md` - Guia operacional alternativo
 
 ---
 
@@ -87,44 +77,22 @@ mkdir -p app/criar-jogador app/partida app/liga
 
 ### Comandos Úteis
 ```bash
-# Desenvolvimento
-npm run dev           # Iniciar servidor
-npm run build         # Build de produção
-npm run lint          # ESLint
-npm run test          # Testes unitários (Vitest)
-npm run test:e2e      # Testes E2E (Playwright)
-
-# Gerenciar dependências
-npm install <pkg>     # Adicionar dependência
+bun run dev          # desenvolvimento
+bun run build        # build produção
+bun run lint         # lint
+bun run test         # testes unitários
+bun run test:e2e     # testes e2e
 ```
 
-### Arquivos Chave
-- `store/` - Estados Zustand (player, match, league)
-- `lib/` - Lógica core (combat, ai, dice)
-- `schemas/` - Validação Zod
-- `types/` - Tipos TypeScript
+### Áreas-Chave do Código
+- `app/partida/` - fluxo de partida React
+- `app/carreira/` - fluxo de carreira e gestão de time
+- `lib/` - lógica de combate/IA/storage
+- `store/` - estado global
+- `tests/` e `e2e/` - cobertura automatizada
 
 ---
 
-## 🚀 Como Continuar
+## 🚀 Próximo Marco
 
-### Opção A: Aguardar Todas as Decisões
-Esperar respostas às 5 perguntas antes de começar.
-
-### Opção B: Começar com Decisões Padrão (MVP)
-```
-1. Campo: Retângulos coloridos simples ✅
-2. Sprites: Círculos coloridos ✅
-3. Ordem: Criação de jogador primeiro ✅
-4. PM: Continuar com npm ✅
-5. Atributos: Manter 6 atributos por ora, refatorar depois ⏳
-```
-
-### Opção C: Implementar em Paralelo
-- Criar estrutura base (Grupo 1) independente das decisões
-- Enquanto isso, usuário responde as perguntas
-- Depois implementar UI específica baseada nas respostas
-
----
-
-**Aguardando orientação do usuário para prosseguir! 🎮**
+**Milestone 3**: E2E crítico + validação manual final de carreira/partida.

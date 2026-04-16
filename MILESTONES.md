@@ -1,8 +1,10 @@
 # 🎯 Soccer Stars - Milestones de Desenvolvimento
 
-> **Status Geral**: MVP - Core Logic completo, Game Engine em andamento  
-> **Última Atualização**: 05/04/2026  
-> **Runtime**: Bun (obrigatório) ⚠️ **NÃO INSTALADO** - usar npm como fallback
+> **Status Geral**: MVP - Core Logic completo, Carreira/Partida em estabilização  
+> **Última Atualização**: 16/04/2026  
+> **Runtime**: Bun (obrigatório) ✅ **INSTALADO** (v1.3.11)
+
+> **Decisão Temporária**: Phaser pausado por ora. O desenvolvimento da partida seguirá em **React/Next + lógica em lib/** até nova decisão.
 
 ---
 
@@ -11,11 +13,11 @@
 ```
 Fase 1: Fundação        ██████████ 100% (10/10) ✅
 Fase 2: Core Logic      ██████████ 100% (8/8)  ✅
-Fase 3: Game Engine     █████░░░░░  50% (3/6)  🚧
-Fase 4: UI/UX           ░░░░░░░░░░   0% (0/3)  🚧
+Fase 3: Partida (React) ████████░░  80% (4/5)  🚧
+Fase 4: UI/UX           ██████░░░░  60% (2/3)  🚧
 Fase 5: Polish          ░░░░░░░░░░   0% (0/2)  📋
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total:                  ███████░░░  72% (21/29) 🚀
+Total:                  ████████░░  78% (24/31) 🚀
 ```
 
 ---
@@ -41,11 +43,11 @@ Total:                  ███████░░░  72% (21/29) 🚀
 
 ### ✅ Schemas e Validação (TDD Completo)
 - [x] **player-schemas** - `schemas/player-schema.ts` ✅
-  - ✅ Validação de distribuição: 18 pontos total (6 obrigatórios + 12 livres)
+  - ✅ Validação de distribuição: 9 pontos total (3 obrigatórios + 6 livres)
   - ✅ Min 1, Max 5 por atributo
   - ✅ Validação de avatar (10MB max, base64, MIME types)
-  - ✅ Schema para Goleiro (6 pontos: Captura + Espalme)
-  - ✅ Schema discriminado por posição (GK vs DF/MF/FW)
+  - ✅ Goleiro com os mesmos 3 atributos e mecânica especial (Captura/Espalme)
+  - ✅ Schema discriminado por posição (GK vs jogadores de linha)
 
 - [x] **match-schemas** - `schemas/match-schema.ts` ✅
   - ✅ Validação de AcaoOfensiva, AcaoDefensiva
@@ -102,52 +104,47 @@ Total:                  ███████░░░  72% (21/29) 🚀
 
 ---
 
-## 🎮 Fase 3: Game Engine (50% - 3/6 completos)
+## 🎮 Fase 3: Partida Runtime (React-first, sem Phaser por ora) (80% - 4/5 completos)
 
-### Configuração Phaser
-- [x] **phaser-config** - Configurar Phaser.js ✅
-  - game/config.ts com settings mobile-first
-  - Viewport mínimo 375px
-  - Touch controls
+### Fluxo de Partida
+- [x] **partida-base** - Página de partida com preparação e início ✅
+  - Escolha de uniforme (primário/secundário)
+  - Pontapé inicial e posse
 
-- [x] **phaser-scenes** - Criar cenas base ✅
-  - MenuScene (tela inicial)
-  - PartidaScene (jogo principal)
-  - ResultadoScene (fim de partida)
-
-### Entidades e Lógica
-- [x] **campo-entity** - Renderizar campo com 5 zonas ✅
-  - DF1, MI1, MC, MI2, DF2
-  - Indicadores visuais de zona atual
-
-- [ ] **jogador-entity** - Sprite de jogador e bola
-  - Animações de movimento
-  - Integração com match-store
-
-- [ ] **hud-system** - HUD de partida
-  - Placar, tempo, energia
-  - Botões de ação (Chute/Drible/Passe/Esperar)
-  - Sincronização React ↔ Phaser via Zustand
-
-- [ ] **match-loop** - Loop principal de partida
+- [x] **match-loop** - Loop principal com tempo e logs ✅
   - 1 ação por minuto
-  - Acréscimos (1d5 + 1d10)
-  - Intervalo (regenera +5 energia)
+  - Acréscimos e intervalo
+  - Atualização de zona e posse
+
+- [x] **energia-e-substituicao** - Estamina e troca automática ✅
+  - Consumo por ação
+  - Regeneração no intervalo
+  - Substituição automática apenas no 2º tempo
+
+- [x] **regras-especiais** - Regras críticas de confronto ✅
+  - Sem prioridade fixa do protagonista na posse (evita desgaste excessivo)
+  - Escolha de marcador por prioridade de zona (aleatório ponderado)
+  - Chute livre após vencer último defensor na zona final
+
+- [ ] **e2e-partida-critica** - Cobertura E2E dos cenários críticos
+  - Substituição automática no 2º tempo
+  - Chute livre pós último defensor
+  - Fluxo completo de rodada até retorno da carreira
 
 ---
 
-## 🎨 Fase 4: UI/UX (0% - 0/3 completos)
+## 🎨 Fase 4: UI/UX (60% - 2/3 completos)
 
 ### Componentes React
-- [ ] **criar-jogador-ui** - Tela de criação
+- [x] **criar-jogador-ui** - Tela de criação ✅
   - Input de nome
   - Seletor de posição (GK/DF/MF/FW)
-  - Distribuidor de atributos (12 pontos livres)
+  - Distribuidor de atributos (9 pontos totais)
   - Upload de avatar (validação 10MB)
   - Preview em tempo real
 
-- [ ] **partida-ui** - Interface de partida
-  - Container Phaser
+- [x] **partida-ui** - Interface de partida ✅
+  - Container React
   - Controles mobile-first
   - Modal de seleção de companheiro (para passes)
 
@@ -163,6 +160,12 @@ Total:                  ███████░░░  72% (21/29) 🚀
 - [ ] **player-system** - Sistema de progressão (FUTURO)
   - Level up, XP, evolução de atributos
   - **Nota**: Deixado para depois da demo
+
+- [ ] **season-transition** - Virada de temporada (PENDENTE)
+  - Estado de temporada existe (`temporadaAtual`) ✅
+  - Função de avanço existe em `lib/storage.ts` (`advanceSeason`) ✅
+  - Integração automática ao finalizar a 22ª rodada ✅
+  - Tela/fluxo de encerramento de temporada ❌
 
 - [ ] **setup-deploy-config** - Configurar deploy
   - vercel.json ou netlify.toml
@@ -185,26 +188,22 @@ Total:                  ███████░░░  72% (21/29) 🚀
 
 ---
 
-### **🚧 Milestone 2: Game Engine (Fase 3) - ATUAL**
-**Objetivo**: Implementar renderização visual e loop de jogo usando Phaser.js.
+### **🚧 Milestone 2: Carreira/Partida Estável (React-first) - ATUAL**
+**Objetivo**: estabilizar os fluxos de carreira e partida sem dependência de Phaser nesta fase.
 
 #### Tarefas Imediatas:
-1. 🔨 Criar estrutura de pastas `game/` e `components/`
-2. 🔨 Configurar Phaser.js (`game/config.ts`)
-3. 🔨 Implementar MenuScene (tela inicial)
-4. 🔨 Implementar PartidaScene (cena principal de jogo)
-5. 🔨 Renderizar campo visual com 5 zonas
-6. 🔨 Criar HUD System (placar, tempo, energia, botões)
-7. 🔨 Implementar match loop (1 ação/minuto, acréscimos, intervalo)
-8. 🔨 Integrar Phaser ↔ Zustand (bridge de estados)
+1. 🔨 Finalizar validação manual do fluxo `/carreira/time` (trocas + autosave)
+2. 🔨 Cobrir hotfixes críticos com E2E
+3. 🔨 Consolidar UI da liga e fluxo completo de rodada
+4. 🔨 Revisar documentação para remover conflitos (atributos, liga, progresso)
+5. 🔨 Definir regra de encerramento da temporada ao final da 22ª rodada
 
 #### Critérios de Sucesso:
-- [ ] Phaser renderiza corretamente (sem erros de SSR)
-- [ ] Campo com 5 zonas visíveis
-- [ ] HUD mostra placar, tempo e energia
-- [ ] Loop de partida funciona (1 ação/minuto)
-- [ ] Bridge Zustand ↔ Phaser sincroniza estados
-- [ ] Mobile-first (viewport mínimo 375px)
+- [x] Troca titular/reserva persiste imediatamente (coberto por teste unitário)
+- [x] Ordenação por posição aplicada nas listas da escalação
+- [x] Regras críticas de partida implementadas (prioridade protagonista, chute livre, autosub 2º tempo)
+- [ ] E2E cobre os 3 cenários críticos de carreira/partida
+- [ ] Validação manual final dos fluxos `/carreira/time` e `/partida`
 
 ---
 
@@ -242,14 +241,17 @@ git commit -m "refactor: extrair constantes de validação"
 - ✅ Estrutura de dados de carreira preservada ao editar protagonista/escalação (sem perder histórico da liga)
 - ✅ Partida deixou de aceitar placar manual: resultado agora vem da gameplay em `/partida`
 - ✅ Finalização de rodada simula automaticamente os demais confrontos da EAST/WEST e avança a temporada regular
+- ✅ Virada automática de temporada ao concluir a rodada 22 (rodada reinicia em 1)
+- ✅ IA da partida ajustada: removida prioridade fixa do protagonista e marcador por prioridade de zona
 
 ### 🚨 Hotfix imediato (estado atual)
-- [ ] Validar fluxo de substituição em `/carreira/time` (campo ↔ reservas) com persistência imediata por troca
-- [ ] Revisar sincronização de estado após autosave da escalação (evitar reset visual de titulares/formação)
-- [ ] Confirmar layout desktop da Escalação: campo à esquerda e reservas à direita
-- [ ] Garantir ordenação por posição em todas as listas da Escalação (GK → DF → MF → FW)
-- [ ] Revalidar no `/partida`:
-  - prioridade extra do protagonista
+- [x] Fluxo de substituição em `/carreira/time` (campo ↔ reservas) com persistência imediata por troca
+- [ ] Revisar sincronização de estado após autosave da escalação (evitar reset visual de titulares/formação) **(validação manual pendente)**
+- [x] Layout desktop da Escalação: campo à esquerda e reservas à direita
+- [x] Ordenação por posição em todas as listas da Escalação (GK → DF → MF → FW)
+- [x] Revalidação técnica no `/partida`:
+  - sem prioridade fixa do protagonista
+  - marcador escolhido por prioridade de zona
   - chute livre após vencer último defensor
   - substituição automática só no 2º tempo
 - [ ] Executar validação final manual dos fluxos `/carreira/time` e `/partida`
@@ -282,7 +284,7 @@ git commit -m "refactor: extrair constantes de validação"
 - [ ] Redimensionamento automático de avatar (200x200px via CSS?)
 
 ### Anti-Padrões a Evitar
-- ❌ Armazenar objetos Phaser no Zustand
+- ❌ Armazenar objetos de engine/render no Zustand
 - ❌ Gerar teste + implementação no mesmo passo
 - ❌ Pular validação Zod
 - ❌ Usar `any` em TypeScript
@@ -295,10 +297,11 @@ git commit -m "refactor: extrair constantes de validação"
 - [docs/GDD.md](./docs/GDD.md) - Game Design Document
 - [docs/CLAUDE.md](./docs/CLAUDE.md) - Guia para agentes de IA
 - [docs/GEMINI.md](./docs/GEMINI.md) - Guia alternativo
+- [docs/HOTFIX-EXECUCAO-16-04-2026.md](./docs/HOTFIX-EXECUCAO-16-04-2026.md) - Checklist executável dos hotfixes
 - [README.md](./README.md) - Visão geral do projeto
 
 ---
 
-**Última Revisão**: 05/04/2026 às 18:44  
-**Milestone Atual**: Milestone 2 - Game Engine (Fase 3)  
-**Próximo Marco**: Milestone 3 - UI/UX (Fase 4)
+**Última Revisão**: 16/04/2026 às 19:10  
+**Milestone Atual**: Milestone 2 - Carreira/Partida Estável (React-first)  
+**Próximo Marco**: Milestone 3 - E2E crítico + validação manual final
