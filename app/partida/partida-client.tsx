@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { PhaserMatch } from '@/components/partida/phaser-match';
 import { loadCareerSlot } from '@/lib/storage';
 
@@ -9,7 +9,11 @@ interface PartidaClientProps {
 }
 
 export function PartidaClient({ slot }: PartidaClientProps) {
-  const save = useMemo(() => loadCareerSlot(slot), [slot]);
+  const [save, setSave] = useState<ReturnType<typeof loadCareerSlot>>(null);
+
+  useEffect(() => {
+    setSave(loadCareerSlot(slot));
+  }, [slot]);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-4 px-4 py-6">

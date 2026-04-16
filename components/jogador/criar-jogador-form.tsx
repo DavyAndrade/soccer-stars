@@ -18,12 +18,14 @@ interface CriarJogadorFormProps {
   onSubmit: (data: CreatePlayerInput) => void | Promise<void>;
   initialData?: CreatePlayerInput;
   submitLabel?: string;
+  editOnlyProfile?: boolean;
 }
 
 export function CriarJogadorForm({
   onSubmit,
   initialData,
   submitLabel = 'Criar Jogador',
+  editOnlyProfile = false,
 }: CriarJogadorFormProps) {
   const teams = useMemo(() => getInitialTeams(), []);
   const defaultTeam = teams[0];
@@ -103,73 +105,101 @@ export function CriarJogadorForm({
             error={errors.nome?.message}
           />
 
-          <PosicaoSelector
-            value={posicao}
-            onChange={(value) => setValue('posicao', value, { shouldValidate: true, shouldDirty: true })}
-          />
+          {editOnlyProfile ? (
+            <div className="space-y-2">
+              <Label>Posição</Label>
+              <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">{posicao}</p>
+            </div>
+          ) : (
+            <PosicaoSelector
+              value={posicao}
+              onChange={(value) => setValue('posicao', value, { shouldValidate: true, shouldDirty: true })}
+            />
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="time">Time</Label>
-            <select
-              id="time"
-              className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
-              value={timeId}
-              onChange={(e) => {
-                const nextTeamId = e.target.value;
-                const nextTeam = teams.find((team) => team.id === nextTeamId);
-                const nextNumero = nextTeam?.numerosDisponiveis[0] ?? 30;
-                setValue('timeId', nextTeamId, { shouldValidate: true, shouldDirty: true });
-                setValue('numeroCamisa', nextNumero, { shouldValidate: true, shouldDirty: true });
-              }}
-            >
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  [{team.conferencia}] {team.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          {editOnlyProfile ? (
+            <div className="space-y-2">
+              <Label>Time</Label>
+              <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                {teamSelecionado ? `[${teamSelecionado.conferencia}] ${teamSelecionado.nome}` : timeId}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="time">Time</Label>
+              <select
+                id="time"
+                className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                value={timeId}
+                onChange={(e) => {
+                  const nextTeamId = e.target.value;
+                  const nextTeam = teams.find((team) => team.id === nextTeamId);
+                  const nextNumero = nextTeam?.numerosDisponiveis[0] ?? 30;
+                  setValue('timeId', nextTeamId, { shouldValidate: true, shouldDirty: true });
+                  setValue('numeroCamisa', nextNumero, { shouldValidate: true, shouldDirty: true });
+                }}
+              >
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    [{team.conferencia}] {team.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="nacionalidade">Nacionalidade</Label>
-              <Input
-                id="nacionalidade"
-                value={nacionalidade}
-                onChange={(e) =>
-                  setValue('nacionalidade', e.target.value, { shouldValidate: true, shouldDirty: true })
-                }
-              />
+              {editOnlyProfile ? (
+                <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">{nacionalidade}</p>
+              ) : (
+                <Input
+                  id="nacionalidade"
+                  value={nacionalidade}
+                  onChange={(e) =>
+                    setValue('nacionalidade', e.target.value, { shouldValidate: true, shouldDirty: true })
+                  }
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="idade">Idade</Label>
-              <Input
-                id="idade"
-                type="number"
-                min={15}
-                max={18}
-                value={idade}
-                onChange={(e) =>
-                  setValue('idade', Number(e.target.value), { shouldValidate: true, shouldDirty: true })
-                }
-              />
+              {editOnlyProfile ? (
+                <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">{idade}</p>
+              ) : (
+                <Input
+                  id="idade"
+                  type="number"
+                  min={15}
+                  max={18}
+                  value={idade}
+                  onChange={(e) =>
+                    setValue('idade', Number(e.target.value), { shouldValidate: true, shouldDirty: true })
+                  }
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="numero-camisa">Número</Label>
-              <select
-                id="numero-camisa"
-                className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                value={numeroCamisa}
-                onChange={(e) =>
-                  setValue('numeroCamisa', Number(e.target.value), { shouldValidate: true, shouldDirty: true })
-                }
-              >
-                {numerosDisponiveis.map((numero) => (
-                  <option key={numero} value={numero}>
-                    {numero}
-                  </option>
-                ))}
-              </select>
+              {editOnlyProfile ? (
+                <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">{numeroCamisa}</p>
+              ) : (
+                <select
+                  id="numero-camisa"
+                  className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                  value={numeroCamisa}
+                  onChange={(e) =>
+                    setValue('numeroCamisa', Number(e.target.value), { shouldValidate: true, shouldDirty: true })
+                  }
+                >
+                  {numerosDisponiveis.map((numero) => (
+                    <option key={numero} value={numero}>
+                      {numero}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
@@ -184,10 +214,19 @@ export function CriarJogadorForm({
             {errors.avatar?.message && <p className="text-sm text-destructive">{errors.avatar.message}</p>}
           </div>
 
-          <AtributosDistributor
-            value={atributos}
-            onChange={(value) => setValue('atributos', value, { shouldValidate: true, shouldDirty: true })}
-          />
+          {editOnlyProfile ? (
+            <div className="space-y-2">
+              <Label>Atributos</Label>
+              <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                Potência {atributos.potencia} • Rapidez {atributos.rapidez} • Técnica {atributos.tecnica}
+              </p>
+            </div>
+          ) : (
+            <AtributosDistributor
+              value={atributos}
+              onChange={(value) => setValue('atributos', value, { shouldValidate: true, shouldDirty: true })}
+            />
+          )}
 
           <PlayerPreview nome={nome} posicao={posicao} atributos={atributos} avatar={avatar} />
 

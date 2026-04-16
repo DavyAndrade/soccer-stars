@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CreatePlayerSchema } from '@/schemas/player-schema';
-import { advanceSeasonAges, getInitialTeams } from '@/data/teams';
-import type { Time } from '@/types/team';
+import { advanceSeasonAges, applyFormationToSquad, getInitialTeams } from '@/data/teams';
+import { FORMACOES, type FormacaoNome, type TeamSquadPlayer, type Time } from '@/types/team';
 
 /**
  * Chaves do localStorage
@@ -49,13 +49,96 @@ const SaveSlotsSchema = z.object({
 export type CareerSave = z.infer<typeof CareerSaveSchema>;
 export type SaveSlotsState = z.infer<typeof SaveSlotsSchema>;
 
+function getBrowserStorage(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const storage = window.localStorage as Partial<Storage> | undefined;
+  if (
+    !storage ||
+    typeof storage.getItem !== 'function' ||
+    typeof storage.setItem !== 'function' ||
+    typeof storage.removeItem !== 'function'
+  ) {
+    return null;
+  }
+
+  return storage as Storage;
+}
+
+function calculateAvailableNumbers(squad: TeamSquadPlayer[]): number[] {
+  const used = new Set(squad.map((player) => player.numero));
+  return Array.from({ length: 30 }, (_, i) => i + 1).filter((n) => !used.has(n));
+}
+
+function buildProtagonista(player: PlayerData, slotId: SaveSlotId): TeamSquadPlayer {
+  return {
+    id: `protagonista-${slotId}`,
+    nome: player.nome,
+    numero: player.numeroCamisa,
+    posicao: player.posicao,
+    atributos: player.atributos,
+    energia: 10,
+    energiaMaxima: 10,
+    isProtagonista: true,
+    timeId: player.timeId,
+    avatarUrl: player.avatar,
+    nacionalidade: player.nacionalidade,
+    idade: player.idade,
+    titular: false,
+  };
+}
+
+function syncProtagonista(times: Time[], protagonista: PlayerData, slotId: SaveSlotId): Time[] {
+  const protagonistaJogador = buildProtagonista(protagonista, slotId);
+
+  const cleared = times.map((time) => ({
+    ...time,
+    jogadores: time.jogadores.filter((jogador) => !jogador.isProtagonista),
+  }));
+
+  return cleared.map((time) => {
+    if (time.id !== protagonista.timeId) {
+      return {
+        ...time,
+        numerosDisponiveis: calculateAvailableNumbers(time.jogadores),
+      };
+    }
+
+    const conflitantes = time.jogadores.filter((jogador) => jogador.numero === protagonista.numeroCamisa);
+    const semConflito = conflitantes.length > 0
+      ? time.jogadores.filter((jogador) => jogador.numero !== protagonista.numeroCamisa)
+      : time.jogadores;
+
+    const reservaMesmoCargo = semConflito.find(
+      (jogador) => jogador.posicao === protagonista.posicao && !jogador.titular
+    );
+    const substitutoId = reservaMesmoCargo?.id ?? semConflito.find((jogador) => !jogador.titular)?.id;
+
+    const baseSquad = substitutoId
+      ? semConflito.filter((jogador) => jogador.id !== substitutoId)
+      : semConflito.slice(0, Math.max(0, semConflito.length - 1));
+
+    const jogadoresAtualizados = applyFormationToSquad([...baseSquad, protagonistaJogador], time.formacao.nome);
+    return {
+      ...time,
+      jogadores: jogadoresAtualizados,
+      numerosDisponiveis: calculateAvailableNumbers(jogadoresAtualizados),
+    };
+  });
+}
+
 /**
  * Salvar dados do jogador no localStorage
  */
 export function savePlayerData(data: PlayerData): void {
+  const storage = getBrowserStorage();
+  if (!storage) return;
+
   try {
     const serialized = JSON.stringify(data);
-    localStorage.setItem(STORAGE_KEYS.PLAYER, serialized);
+    storage.setItem(STORAGE_KEYS.PLAYER, serialized);
   } catch (error) {
     console.error('[Storage] Erro ao salvar dados do jogador:', error);
   }
@@ -70,8 +153,11 @@ export function savePlayerData(data: PlayerData): void {
  * - Validação Zod falhar
  */
 export function loadPlayerData(): PlayerData | null {
+  const storage = getBrowserStorage();
+  if (!storage) return null;
+
   try {
-    const serialized = localStorage.getItem(STORAGE_KEYS.PLAYER);
+    const serialized = storage.getItem(STORAGE_KEYS.PLAYER);
     
     if (!serialized) {
       return null;
@@ -98,9 +184,12 @@ export function loadPlayerData(): PlayerData | null {
  * Salvar dados da liga no localStorage
  */
 export function saveLeagueData(data: LeagueData): void {
+  const storage = getBrowserStorage();
+  if (!storage) return;
+
   try {
     const serialized = JSON.stringify(data);
-    localStorage.setItem(STORAGE_KEYS.LEAGUE, serialized);
+    storage.setItem(STORAGE_KEYS.LEAGUE, serialized);
   } catch (error) {
     console.error('[Storage] Erro ao salvar dados da liga:', error);
   }
@@ -115,8 +204,11 @@ export function saveLeagueData(data: LeagueData): void {
  * - Validação Zod falhar
  */
 export function loadLeagueData(): LeagueData | null {
+  const storage = getBrowserStorage();
+  if (!storage) return null;
+
   try {
-    const serialized = localStorage.getItem(STORAGE_KEYS.LEAGUE);
+    const serialized = storage.getItem(STORAGE_KEYS.LEAGUE);
     
     if (!serialized) {
       return null;
@@ -143,18 +235,26 @@ export function loadLeagueData(): LeagueData | null {
  * Limpar todos os dados do jogo do localStorage
  */
 export function clearAllData(): void {
+  const storage = getBrowserStorage();
+  if (!storage) return;
+
   try {
-    localStorage.removeItem(STORAGE_KEYS.PLAYER);
-    localStorage.removeItem(STORAGE_KEYS.LEAGUE);
-    localStorage.removeItem(STORAGE_KEYS.SAVE_SLOTS);
+    storage.removeItem(STORAGE_KEYS.PLAYER);
+    storage.removeItem(STORAGE_KEYS.LEAGUE);
+    storage.removeItem(STORAGE_KEYS.SAVE_SLOTS);
   } catch (error) {
     console.error('[Storage] Erro ao limpar dados:', error);
   }
 }
 
 export function loadSaveSlots(): SaveSlotsState {
+  const storage = getBrowserStorage();
+  if (!storage) {
+    return { slots: [null, null, null] };
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.SAVE_SLOTS);
+    const raw = storage.getItem(STORAGE_KEYS.SAVE_SLOTS);
     if (!raw) {
       return { slots: [null, null, null] };
     }
@@ -173,8 +273,11 @@ export function loadSaveSlots(): SaveSlotsState {
 }
 
 export function saveSaveSlots(data: SaveSlotsState): void {
+  const storage = getBrowserStorage();
+  if (!storage) return;
+
   try {
-    localStorage.setItem(STORAGE_KEYS.SAVE_SLOTS, JSON.stringify(data));
+    storage.setItem(STORAGE_KEYS.SAVE_SLOTS, JSON.stringify(data));
   } catch (error) {
     console.error('[Storage] Erro ao salvar save slots:', error);
   }
@@ -198,7 +301,7 @@ export function deleteCareerSlot(slotId: SaveSlotId): void {
 }
 
 export function createCareerFromPlayer(player: PlayerData, slotId: SaveSlotId): CareerSave {
-  const teams = getInitialTeams();
+  const teams = syncProtagonista(getInitialTeams(), player, slotId);
   return {
     slotId,
     createdAt: new Date().toISOString(),
@@ -207,6 +310,86 @@ export function createCareerFromPlayer(player: PlayerData, slotId: SaveSlotId): 
     protagonista: player,
     liga: { times: teams },
   };
+}
+
+export function updateCareerProtagonista(slotId: SaveSlotId, protagonista: PlayerData): CareerSave | null {
+  const current = loadCareerSlot(slotId);
+  if (!current) return null;
+
+  const updated: CareerSave = {
+    ...current,
+    protagonista,
+    updatedAt: new Date().toISOString(),
+    liga: {
+      times: syncProtagonista(current.liga.times as Time[], protagonista, slotId),
+    },
+  };
+
+  saveCareerSlot(slotId, updated);
+  return updated;
+}
+
+type UpdateEscalacaoPayload = {
+  formacaoNome: FormacaoNome;
+  titularesIds: string[];
+};
+
+export function updateTeamEscalacao(
+  slotId: SaveSlotId,
+  teamId: string,
+  payload: UpdateEscalacaoPayload
+): CareerSave | null {
+  const current = loadCareerSlot(slotId);
+  if (!current) return null;
+
+  const updatedTimes = (current.liga.times as Time[]).map((time) => {
+    if (time.id !== teamId) {
+      return time;
+    }
+
+    const titularesSet = new Set(payload.titularesIds);
+    let jogadores = time.jogadores.map((jogador) => ({ ...jogador, titular: titularesSet.has(jogador.id) }));
+    const titularesAtuais = jogadores.filter((jogador) => jogador.titular);
+
+    if (titularesAtuais.length < 11) {
+      const reservas = jogadores.filter((jogador) => !jogador.titular);
+      reservas.slice(0, 11 - titularesAtuais.length).forEach((jogador) => {
+        jogador.titular = true;
+      });
+    }
+
+    if (jogadores.filter((jogador) => jogador.titular).length > 11) {
+      let extras = jogadores.filter((jogador) => jogador.titular).length - 11;
+      jogadores = jogadores.map((jogador) => {
+        if (extras > 0 && jogador.titular) {
+          extras -= 1;
+          return { ...jogador, titular: false };
+        }
+        return jogador;
+      });
+    }
+
+    return {
+      ...time,
+      formacao: {
+        nome: payload.formacaoNome,
+        distribuicao: FORMACOES[payload.formacaoNome],
+      },
+      jogadores,
+      numerosDisponiveis: calculateAvailableNumbers(jogadores),
+    };
+  });
+
+  const updated: CareerSave = {
+    ...current,
+    updatedAt: new Date().toISOString(),
+    liga: {
+      times: updatedTimes,
+    },
+  };
+
+  saveCareerSlot(slotId, updated);
+  return updated;
 }
 
 export function advanceSeason(save: CareerSave): CareerSave {

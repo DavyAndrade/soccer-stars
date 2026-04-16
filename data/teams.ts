@@ -91,6 +91,41 @@ function randomAtributos(rng: () => number): PlayerAttributes {
   return attrs;
 }
 
+function formationRoleTargets(formacaoNome: FormacaoNome): Record<PlayerPosition, number> {
+  if (formacaoNome === '4-2-3-1') {
+    return { GK: 1, DF: 4, MF: 5, FW: 1 };
+  }
+
+  const [df, mf, fw] = formacaoNome.split('-').map(Number);
+  return { GK: 1, DF: df, MF: mf, FW: fw };
+}
+
+export function applyFormationToSquad(jogadores: TeamSquadPlayer[], formacaoNome: FormacaoNome): TeamSquadPlayer[] {
+  const targets = formationRoleTargets(formacaoNome);
+  const sorted = [...jogadores].sort((a, b) => a.numero - b.numero);
+
+  const grouped: Record<PlayerPosition, TeamSquadPlayer[]> = {
+    GK: [],
+    DF: [],
+    MF: [],
+    FW: [],
+  };
+
+  sorted.forEach((jogador) => grouped[jogador.posicao].push(jogador));
+
+  const titulares = new Set<string>();
+  (['GK', 'DF', 'MF', 'FW'] as PlayerPosition[]).forEach((posicao) => {
+    grouped[posicao].slice(0, targets[posicao]).forEach((jogador) => titulares.add(jogador.id));
+  });
+
+  if (titulares.size < 11) {
+    const reservas = sorted.filter((jogador) => !titulares.has(jogador.id));
+    reservas.slice(0, 11 - titulares.size).forEach((jogador) => titulares.add(jogador.id));
+  }
+
+  return jogadores.map((jogador) => ({ ...jogador, titular: titulares.has(jogador.id) }));
+}
+
 function generateSquad(teamId: string): TeamSquadPlayer[] {
   const rng = createRng(hashString(teamId));
   const positions: PlayerPosition[] = [
@@ -125,6 +160,7 @@ function generateSquad(teamId: string): TeamSquadPlayer[] {
       timeId: teamId,
       nacionalidade: pick(rng, NACIONALIDADES),
       idade,
+      titular: false,
     };
   });
 }
@@ -141,8 +177,8 @@ function calculateAvailableNumbers(squad: TeamSquadPlayer[]): number[] {
 
 export function getInitialTeams(): Time[] {
   return TEAM_SEEDS.map((seed) => {
-    const jogadores = generateSquad(seed.id);
     const formacaoNome = pickInitialFormation(seed.id);
+    const jogadores = applyFormationToSquad(generateSquad(seed.id), formacaoNome);
     return {
       ...seed,
       jogadores,
@@ -157,9 +193,12 @@ export function getInitialTeams(): Time[] {
 
 export function advanceSeasonAges(times: Time[]): Time[] {
   return times.map((team) => {
-    const jogadoresAtualizados = team.jogadores
-      .map((player) => ({ ...player, idade: player.idade + 1 }))
-      .filter((player) => player.idade <= 18);
+    const jogadoresAtualizados = applyFormationToSquad(
+      team.jogadores
+        .map((player) => ({ ...player, idade: player.idade + 1 }))
+        .filter((player) => player.idade <= 18),
+      team.formacao.nome
+    );
 
     return {
       ...team,

@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CriarJogadorForm } from '@/components/jogador/criar-jogador-form';
-import { createCareerFromPlayer, loadCareerSlot, saveCareerSlot } from '@/lib/storage';
+import { createCareerFromPlayer, loadCareerSlot, saveCareerSlot, updateCareerProtagonista } from '@/lib/storage';
 import { usePlayerStore } from '@/store/player-store';
 import type { CreatePlayerInput } from '@/schemas/player-schema';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,13 @@ interface CriarJogadorClientProps {
 
 export function CriarJogadorClient({ slotId, mode }: CriarJogadorClientProps) {
   const router = useRouter();
-  const existingSave = useMemo(() => loadCareerSlot(slotId), [slotId]);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [existingSave, setExistingSave] = useState<ReturnType<typeof loadCareerSlot>>(null);
+
+  useEffect(() => {
+    setExistingSave(loadCareerSlot(slotId));
+    setIsHydrated(true);
+  }, [slotId]);
   const {
     setNome,
     setPosicao,
@@ -37,17 +43,34 @@ export function CriarJogadorClient({ slotId, mode }: CriarJogadorClientProps) {
     setNacionalidade(data.nacionalidade);
     setIdade(data.idade);
 
-    const career = mode === 'edit' && existingSave
-      ? {
-        ...existingSave,
-        protagonista: data,
-        updatedAt: new Date().toISOString(),
-      }
-      : createCareerFromPlayer(data, slotId);
-    saveCareerSlot(slotId, career);
+    if (mode === 'edit' && existingSave) {
+      updateCareerProtagonista(slotId, data);
+    } else {
+      const career = createCareerFromPlayer(data, slotId);
+      saveCareerSlot(slotId, career);
+    }
 
     router.push(`/carreira?slot=${slotId}`);
   };
+
+  if (!isHydrated && mode === 'edit') {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center px-4 py-8">
+        <p className="text-sm text-muted-foreground">Carregando dados do jogador...</p>
+      </main>
+    );
+  }
+
+  if (mode === 'edit' && !existingSave) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center gap-4 px-4 py-8">
+        <p className="text-sm text-muted-foreground">Save não encontrado para edição.</p>
+        <Button variant="outline" onClick={() => router.push('/saves?mode=continue')}>
+          Voltar para Saves
+        </Button>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-4 py-8">
@@ -60,6 +83,7 @@ export function CriarJogadorClient({ slotId, mode }: CriarJogadorClientProps) {
         onSubmit={handleCreatePlayer}
         initialData={mode === 'edit' ? existingSave?.protagonista : undefined}
         submitLabel={mode === 'edit' ? 'Salvar Alterações' : 'Criar Jogador'}
+        editOnlyProfile={mode === 'edit'}
       />
     </main>
   );

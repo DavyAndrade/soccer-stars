@@ -9,6 +9,7 @@ export type ConferenciaLiga = 'EAST' | 'WEST';
 export interface TeamSquadPlayer extends Player {
   nacionalidade: string;
   idade: number; // Sub-18: 15..18
+  titular: boolean;
 }
 
 export interface Time {
