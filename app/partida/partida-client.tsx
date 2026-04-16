@@ -24,6 +24,14 @@ type LogEntry = { id: number; parts: LogPart[] };
 
 const ZONAS: ZonaCampo[] = ['DF1', 'MI1', 'MC', 'MI2', 'DF2'];
 const POSICAO_ORDEM: Record<PlayerPosition, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
+const PRIORIDADE_POSICAO_POR_ZONA: Record<ZonaCampo, Record<PlayerPosition, number>> = {
+  DF1: { GK: 0, DF: 3, MF: 2, FW: 0.5 },
+  MI1: { GK: 0, DF: 2, MF: 3, FW: 1 },
+  MC: { GK: 0, DF: 1, MF: 3, FW: 2 },
+  MI2: { GK: 0, DF: 0.5, MF: 2, FW: 3 },
+  DF2: { GK: 0, DF: 0.2, MF: 2, FW: 3.2 },
+};
+const PROTAGONIST_POSSESSION_BONUS = 1.6;
 const ACTION_DELAY_MS = 2000;
 const SKIP_DELAY_MS = 30;
 const AUTO_SUB_THRESHOLD = 2;
@@ -240,9 +248,40 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       if (preferred.length > 0) return pickRandom(preferred);
     }
 
-    const allowed = POSICOES_POR_ZONA[zoneForSide(side, zone)] ?? ['DF', 'MF', 'FW'];
+    const contexto = zoneForSide(side, zone);
+    const allowed = POSICOES_POR_ZONA[contexto] ?? ['DF', 'MF', 'FW'];
     const candidates = sourcePool.filter((player) => allowed.includes(player.posicao) && player.posicao !== 'GK');
-    return pickRandom(candidates.length > 0 ? candidates : sourcePool);
+    const poolByZone = candidates.length > 0 ? candidates : sourcePool.filter((player) => player.posicao !== 'GK');
+    if (poolByZone.length === 0) return pickRandom(sourcePool);
+
+    let best: TeamSquadPlayer | null = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (const player of poolByZone) {
+      const attrs = player.atributos ?? fallbackAttributes();
+      const energia = getEnergy(energiaPorJogador, player.id);
+      const prioridadePosicao = PRIORIDADE_POSICAO_POR_ZONA[contexto][player.posicao] ?? 0;
+      const bonusProtagonista =
+        side === 'protagonista' && player.isProtagonista
+          ? PROTAGONIST_POSSESSION_BONUS + (contexto === 'MC' || contexto === 'MI2' || contexto === 'DF2' ? 0.6 : 0)
+          : 0;
+      const bonusAtributoZona =
+        contexto === 'DF1'
+          ? attrs.tecnica * 0.7
+          : contexto === 'MI1'
+            ? attrs.tecnica * 0.9 + attrs.rapidez * 0.2
+            : contexto === 'MC'
+              ? attrs.rapidez * 0.7 + attrs.tecnica * 0.5
+              : contexto === 'MI2'
+                ? attrs.rapidez * 0.9 + attrs.tecnica * 0.4
+                : attrs.potencia * 1 + attrs.rapidez * 0.25;
+      const score = prioridadePosicao * 4 + bonusAtributoZona + bonusProtagonista + energia * 0.35 + Math.random() * 0.35;
+      if (score > bestScore) {
+        bestScore = score;
+        best = player;
+      }
+    }
+
+    return best;
   };
 
   const chooseKickoffCarrier = (side: MatchTeam) =>

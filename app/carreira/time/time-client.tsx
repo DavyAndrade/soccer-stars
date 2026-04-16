@@ -22,6 +22,12 @@ const POSITION_LABEL = {
   MF: 'Meio-campistas',
   FW: 'Atacantes',
 } as const;
+const POSITION_ORDER = {
+  GK: 0,
+  DF: 1,
+  MF: 2,
+  FW: 3,
+} as const;
 
 function hexToRgba(hex: string, alpha: number): string {
   const normalized = hex.replace('#', '');
@@ -160,7 +166,15 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
   const rowHighlightStyle = { backgroundColor: hexToRgba(teamPrimary, 0.16) };
   const formacoes = Object.keys(FORMACOES) as FormacaoNome[];
   const titularesCount = teamDraft.jogadores.filter((jogador) => jogador.titular).length;
-  const reservas = teamDraft.jogadores.filter((jogador) => !jogador.titular);
+  const reservas = teamDraft.jogadores
+    .filter((jogador) => !jogador.titular)
+    .sort((a, b) => {
+      const byPosition =
+        (POSITION_ORDER[a.posicao as keyof typeof POSITION_ORDER] ?? Number.MAX_SAFE_INTEGER) -
+        (POSITION_ORDER[b.posicao as keyof typeof POSITION_ORDER] ?? Number.MAX_SAFE_INTEGER);
+      if (byPosition !== 0) return byPosition;
+      return a.numero - b.numero;
+    });
   const positionCounts = countPositions(teamDraft.jogadores);
   const field = splitLineupForField(teamDraft.jogadores, teamDraft.formacao.nome);
   const elencoPorPosicao = {
@@ -168,6 +182,20 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
     DF: [...teamDraft.jogadores].filter((jogador) => jogador.posicao === 'DF').sort((a, b) => a.numero - b.numero),
     MF: [...teamDraft.jogadores].filter((jogador) => jogador.posicao === 'MF').sort((a, b) => a.numero - b.numero),
     FW: [...teamDraft.jogadores].filter((jogador) => jogador.posicao === 'FW').sort((a, b) => a.numero - b.numero),
+  };
+
+  const persistEscalacao = (nextDraft: Time) => {
+    const updated = updateTeamEscalacao(slot, nextDraft.id, {
+      formacaoNome: nextDraft.formacao.nome,
+      titularesIds: nextDraft.jogadores.filter((jogador) => jogador.titular).map((jogador) => jogador.id),
+    });
+    if (!updated) {
+      setTeamDraft(nextDraft);
+      return;
+    }
+    setSave(updated);
+    const updatedTeam = (updated.liga.times as Time[]).find((time) => time.id === nextDraft.id) ?? null;
+    setTeamDraft(updatedTeam);
   };
 
   const handleSelectForSwap = (playerId: string, titular: boolean, nome: string) => {
@@ -188,42 +216,29 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
       return;
     }
 
-    setTeamDraft((current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        jogadores: current.jogadores.map((jogador) =>
-          jogador.id === selectedForSwap.id
-            ? { ...jogador, titular: !selectedForSwap.titular }
-            : jogador.id === playerId
-              ? { ...jogador, titular: !titular }
-              : jogador
-        ),
-      };
-    });
+    const nextDraft: Time = {
+      ...teamDraft,
+      jogadores: teamDraft.jogadores.map((jogador) =>
+        jogador.id === selectedForSwap.id
+          ? { ...jogador, titular: !selectedForSwap.titular }
+          : jogador.id === playerId
+            ? { ...jogador, titular: !titular }
+            : jogador
+      ),
+    };
+    persistEscalacao(nextDraft);
     setSelectedForSwap(null);
   };
 
   const handleChangeFormacao = (formacaoNome: FormacaoNome) => {
-    setTeamDraft((current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        formacao: {
-          nome: formacaoNome,
-          distribuicao: FORMACOES[formacaoNome],
-        },
-      };
-    });
-  };
-
-  const handleSaveEscalacao = () => {
-    const updated = updateTeamEscalacao(slot, teamDraft.id, {
-      formacaoNome: teamDraft.formacao.nome,
-      titularesIds: teamDraft.jogadores.filter((jogador) => jogador.titular).map((jogador) => jogador.id),
-    });
-    if (updated) setSave(updated);
-    setSelectedForSwap(null);
+    const nextDraft: Time = {
+      ...teamDraft,
+      formacao: {
+        nome: formacaoNome,
+        distribuicao: FORMACOES[formacaoNome],
+      },
+    };
+    persistEscalacao(nextDraft);
   };
 
   return (
@@ -406,9 +421,6 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
             : 'Selecione um titular ou reserva para iniciar uma substituição.'}
         </p>
 
-        <Button className="mt-4" disabled={titularesCount !== 11} onClick={handleSaveEscalacao}>
-          Salvar Escalação
-        </Button>
         </article>
         </section>
       </div>

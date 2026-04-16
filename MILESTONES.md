@@ -243,6 +243,17 @@ git commit -m "refactor: extrair constantes de validação"
 - ✅ Partida deixou de aceitar placar manual: resultado agora vem da gameplay em `/partida`
 - ✅ Finalização de rodada simula automaticamente os demais confrontos da EAST/WEST e avança a temporada regular
 
+### 🚨 Hotfix imediato (estado atual)
+- [ ] Validar fluxo de substituição em `/carreira/time` (campo ↔ reservas) com persistência imediata por troca
+- [ ] Revisar sincronização de estado após autosave da escalação (evitar reset visual de titulares/formação)
+- [ ] Confirmar layout desktop da Escalação: campo à esquerda e reservas à direita
+- [ ] Garantir ordenação por posição em todas as listas da Escalação (GK → DF → MF → FW)
+- [ ] Revalidar no `/partida`:
+  - prioridade extra do protagonista
+  - chute livre após vencer último defensor
+  - substituição automática só no 2º tempo
+- [ ] Executar validação final manual dos fluxos `/carreira/time` e `/partida`
+
 ### ✅ Bun Instalado e Verificado
 - **Status**: Bun v1.3.11 instalado e funcionando ✅
 - **Performance**: Otimizada (Bun é ~3x mais rápido que npm)
