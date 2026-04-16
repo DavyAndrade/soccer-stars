@@ -11,9 +11,20 @@ interface CarreiraClientProps {
 }
 
 const LEAGUE_NAME_BY_CONFERENCE = {
-  EAST: 'Takamado U18 Premier League East',
-  WEST: 'Takamado U18 Premier League West',
+  EAST: 'Prince Takamado U18 Premier League East',
+  WEST: 'Prince Takamado U18 Premier League West',
 } as const;
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) {
+    return `rgba(63, 63, 70, ${alpha})`;
+  }
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function getLeagueName(conference: unknown): string {
   if (conference === 'EAST' || conference === 'WEST') {
@@ -63,33 +74,53 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
 
   const positionCounts = team ? countPositions(team.jogadores) : { GK: 0, DF: 0, MF: 0, FW: 0 };
   const leagueName = getLeagueName(team?.conferencia);
+  const teamPrimary = team?.corPrimaria ?? '#3f3f46';
+  const surfaceStyle = {
+    borderColor: hexToRgba(teamPrimary, 0.32),
+    backgroundColor: 'rgba(24, 24, 27, 0.35)',
+  };
+  const rowHighlightStyle = { backgroundColor: hexToRgba(teamPrimary, 0.16) };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 bg-background px-4 py-8">
       <header className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold">Central da Carreira</h1>
         <p className="text-sm text-muted-foreground">
           Slot {slot} • Temporada {save.temporadaAtual} • Jogador: {save.protagonista.nome}
         </p>
-        <div>
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => router.push('/')}>
             Voltar ao Menu Inicial
           </Button>
+          <span
+            className="inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium"
+            style={{
+              borderColor: hexToRgba(teamPrimary, 0.45),
+              backgroundColor: hexToRgba(teamPrimary, 0.14),
+              color: teamPrimary,
+            }}
+          >
+            {leagueName}
+          </span>
         </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-xl border border-border p-4">
+        <article className="rounded-xl border p-4" style={surfaceStyle}>
           <h2 className="text-lg font-semibold">Protagonista</h2>
           <div className="mt-3 flex items-center gap-4">
             {save.protagonista.avatar ? (
               <img
                 src={save.protagonista.avatar}
                 alt={`Aparência de ${save.protagonista.nome}`}
-                className="h-20 w-20 rounded-full border border-border object-cover"
+                className="h-20 w-20 rounded-full border object-cover"
+                style={{ borderColor: hexToRgba(teamPrimary, 0.5) }}
               />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-border text-xs text-muted-foreground">
+              <div
+                className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed text-xs text-muted-foreground"
+                style={{ borderColor: hexToRgba(teamPrimary, 0.5) }}
+              >
                 Sem imagem
               </div>
             )}
@@ -109,7 +140,7 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
           </Button>
         </article>
 
-        <article className="rounded-xl border border-border p-4">
+        <article className="rounded-xl border p-4" style={surfaceStyle}>
           <h2 className="text-lg font-semibold">Informações do Time</h2>
           {team ? (
             <div className="mt-3 space-y-2 text-sm">
@@ -129,7 +160,7 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-xl border border-border p-4">
+        <article className="rounded-xl border p-4" style={surfaceStyle}>
           <h2 className="text-lg font-semibold">Próximo Passo</h2>
           <p className="mt-3 text-sm text-muted-foreground">
             Em breve você terá calendário, treinos e gestão de temporada aqui. Por ora, prossiga para a partida.
@@ -140,14 +171,14 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
         </article>
       </section>
 
-      <section className="rounded-xl border border-border p-4">
+      <section className="rounded-xl border p-4" style={surfaceStyle}>
         <h2 className="text-lg font-semibold">
           {leagueName}
         </h2>
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left">
+              <tr className="border-b text-left" style={{ borderColor: hexToRgba(teamPrimary, 0.35) }}>
                 <th className="px-2 py-2">#</th>
                 <th className="px-2 py-2">Time</th>
                 <th className="px-2 py-2">Pts</th>
@@ -160,7 +191,11 @@ export function CarreiraClient({ slot }: CarreiraClientProps) {
                 return (
                   <tr
                     key={currentTeam.id}
-                    className={`border-b border-border/60 ${isProtagonistTeam ? 'bg-primary/10' : ''}`}
+                    className="border-b"
+                    style={{
+                      borderColor: hexToRgba(teamPrimary, 0.2),
+                      ...(isProtagonistTeam ? rowHighlightStyle : {}),
+                    }}
                   >
                     <td className="px-2 py-2">{index + 1}</td>
                     <td className="px-2 py-2">{currentTeam.nome}</td>
