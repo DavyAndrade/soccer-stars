@@ -99,7 +99,7 @@ function getBrowserStorage(): Storage | null {
 
 function calculateAvailableNumbers(squad: TeamSquadPlayer[]): number[] {
   const used = new Set(squad.map((player) => player.numero));
-  return Array.from({ length: 30 }, (_, i) => i + 1).filter((n) => !used.has(n));
+  return Array.from({ length: 99 }, (_, i) => i + 1).filter((n) => !used.has(n));
 }
 
 function normalizeLigaState(liga: CareerSave['liga']): CareerLigaState {
@@ -606,7 +606,45 @@ export function saveCareerSlot(slotId: SaveSlotId, save: Omit<CareerSave, 'slotI
 
 export function loadCareerSlot(slotId: SaveSlotId): CareerSave | null {
   const current = loadSaveSlots();
-  return current.slots[slotId - 1];
+  const save = current.slots[slotId - 1];
+  if (!save) return null;
+
+  const normalizedTimes = (save.liga.times as Time[]).map((time) => {
+    const titularesCount = time.jogadores.filter((jogador) => jogador.titular).length;
+    const jogadores =
+      titularesCount === 11
+        ? time.jogadores
+        : applyFormationToSquad(time.jogadores, time.formacao.nome);
+    return {
+      ...time,
+      jogadores,
+      numerosDisponiveis: calculateAvailableNumbers(jogadores),
+    };
+  });
+
+  const needsUpdate = normalizedTimes.some((time, index) => {
+    const previous = save.liga.times[index] as Time | undefined;
+    return (
+      JSON.stringify(previous?.jogadores) !== JSON.stringify(time.jogadores) ||
+      JSON.stringify(previous?.numerosDisponiveis) !== JSON.stringify(time.numerosDisponiveis)
+    );
+  });
+
+  if (!needsUpdate) {
+    return save;
+  }
+
+  const normalized: CareerSave = {
+    ...save,
+    updatedAt: new Date().toISOString(),
+    liga: {
+      ...save.liga,
+      times: normalizedTimes,
+    },
+  };
+
+  saveCareerSlot(slotId, normalized);
+  return normalized;
 }
 
 export function deleteCareerSlot(slotId: SaveSlotId): void {

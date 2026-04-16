@@ -38,29 +38,33 @@ export function calcularPesoChute(
   contexto: ContextoPartida,
   atributos: PlayerAttributes
 ): number {
-  const { zona, placarNPC, placarOponente, minuto, periodo } = contexto;
+  const { zona, energia, placarNPC, placarOponente, minuto, periodo } = contexto;
 
   // Chute só é permitido em MI2 ou DF2
   if (zona !== 'MI2' && zona !== 'DF2') {
     return 0;
   }
 
-  let peso = atributos.potencia * 3; // Base: potência x3 (chute usa potência)
+  let peso = atributos.potencia * 2 + (zona === 'DF2' ? 6 : 2);
 
   // Modificador de placar
   const diferencaPlacar = placarOponente - placarNPC;
   if (diferencaPlacar > 0) {
-    // Perdendo: aumenta urgência
-    peso += diferencaPlacar * 5;
+    peso += diferencaPlacar * 4;
   } else if (diferencaPlacar < 0) {
-    // Ganhando: reduz um pouco
-    peso -= Math.abs(diferencaPlacar) * 1;
+    peso -= Math.abs(diferencaPlacar) * 3;
   }
 
-  // Modificador de tempo (urgência nos minutos finais)
-  if (periodo === 'segundo_tempo' && minuto >= 80 && diferencaPlacar > 0) {
-    // Perdendo nos últimos 10 minutos: URGÊNCIA MÁXIMA
-    peso += (minuto - 80) * 3;
+  if (energia <= 2) {
+    peso -= 3;
+  }
+
+  if (periodo === 'segundo_tempo' && minuto >= 75 && diferencaPlacar > 0) {
+    peso += (minuto - 74) * 1.2;
+  }
+
+  if (periodo === 'segundo_tempo' && minuto >= 85 && diferencaPlacar < 0) {
+    peso -= 4;
   }
 
   return Math.max(0, peso);
@@ -79,20 +83,37 @@ export function calcularPesoDrible(
   contexto: ContextoPartida,
   atributos: PlayerAttributes
 ): number {
-  const { energia } = contexto;
+  const { zona, energia, placarNPC, placarOponente, minuto, periodo } = contexto;
 
-  let peso = atributos.rapidez * 2; // Base: rapidez x2 (drible usa rapidez)
+  let peso = atributos.rapidez * 1.8;
 
-  // Modificador de energia
+  const multiplicadorZona =
+    zona === 'DF1'
+      ? 0.45
+      : zona === 'MI1'
+        ? 0.7
+        : zona === 'MC'
+          ? 1
+          : zona === 'MI2'
+            ? 1.15
+            : 0.85;
+  peso *= multiplicadorZona;
+
   if (energia === 0) {
-    // Energia zero: grande penalidade, evitar drible
-    peso *= 0.3;
-  } else if (energia >= 7) {
-    // Energia alta: boost em drible (agressivo)
-    peso += (energia - 6) * 1.5;
+    peso *= 0.15;
+  } else if (energia <= 2) {
+    peso *= 0.4;
   } else if (energia <= 3) {
-    // Energia baixa: reduz drible
     peso *= 0.7;
+  } else if (energia >= 8) {
+    peso += 2;
+  }
+
+  const diferencaPlacar = placarNPC - placarOponente;
+  if (periodo === 'segundo_tempo' && minuto >= 70 && diferencaPlacar > 0) {
+    peso *= 0.75;
+  } else if (periodo === 'segundo_tempo' && minuto >= 75 && diferencaPlacar < 0) {
+    peso *= 1.1;
   }
 
   return Math.max(0, peso);
@@ -111,23 +132,29 @@ export function calcularPesoPasse(
   contexto: ContextoPartida,
   atributos: PlayerAttributes
 ): number {
-  const { energia, placarNPC, placarOponente } = contexto;
+  const { zona, energia, placarNPC, placarOponente, minuto, periodo } = contexto;
 
-  let peso = atributos.tecnica * 2; // Base: técnica x2 (passe usa técnica)
+  let peso = atributos.tecnica * 2.1;
 
-  // Modificador de energia (conservar quando baixa)
+  if (zona === 'DF1') peso += 6;
+  if (zona === 'MI1') peso += 4;
+  if (zona === 'MC') peso += 2;
+  if (zona === 'DF2') peso -= 1;
+
   if (energia <= 2) {
-    // Energia muito baixa: preferir passe (não gasta energia adicional)
     peso += 5;
   } else if (energia <= 4) {
     peso += 2;
   }
 
-  // Modificador de placar
   const diferencaPlacar = placarNPC - placarOponente;
   if (diferencaPlacar > 0) {
-    // Ganhando: jogo seguro, preferir passe
     peso += diferencaPlacar * 2;
+    if (periodo === 'segundo_tempo' && minuto >= 70) {
+      peso += 3;
+    }
+  } else if (diferencaPlacar < 0 && periodo === 'segundo_tempo' && minuto >= 75 && (zona === 'MI2' || zona === 'DF2')) {
+    peso -= 2;
   }
 
   return Math.max(0, peso);
@@ -146,6 +173,26 @@ export function selecionarAcaoPonderada(pesos: PesosAcao): AcaoOfensiva {
   // Se todos os pesos são 0, fallback para passe
   if (total === 0) {
     return 'passe';
+  }
+
+  const ordenadas: Array<{ acao: AcaoOfensiva; peso: number }> = [
+    { acao: 'chute' as AcaoOfensiva, peso: pesos.chute },
+    { acao: 'drible' as AcaoOfensiva, peso: pesos.drible },
+    { acao: 'passe' as AcaoOfensiva, peso: pesos.passe },
+  ].sort((a, b) => b.peso - a.peso);
+
+  const melhor = ordenadas[0];
+  const segunda = ordenadas[1];
+  const terceira = ordenadas[2];
+  if (
+    melhor &&
+    segunda &&
+    terceira &&
+    melhor.peso >= 6 &&
+    melhor.peso >= segunda.peso * 1.6 &&
+    segunda.peso >= terceira.peso * 1.15
+  ) {
+    return melhor.acao;
   }
 
   const random = Math.random() * total;

@@ -23,8 +23,12 @@ type LogPart = { text: string; side?: MatchTeam };
 type LogEntry = { id: number; parts: LogPart[] };
 
 const ZONAS: ZonaCampo[] = ['DF1', 'MI1', 'MC', 'MI2', 'DF2'];
+const POSICAO_ORDEM: Record<PlayerPosition, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
 const ACTION_DELAY_MS = 2000;
 const SKIP_DELAY_MS = 30;
+const AUTO_SUB_THRESHOLD = 2;
+const AUTO_SUB_MIN_ENERGY = 5;
+const MAX_AUTO_SUBS_PER_TEAM = 5;
 
 function clampEnergy(value: number): number {
   return Math.max(0, Math.min(10, value));
@@ -89,6 +93,12 @@ function recoverAllEnergy(energyMap: EnergyMap): EnergyMap {
   return next;
 }
 
+function getPlayersOnField(roster: TeamSquadPlayer[], ids: string[]): TeamSquadPlayer[] {
+  if (ids.length === 0) return roster.filter((player) => player.titular);
+  const idSet = new Set(ids);
+  return roster.filter((player) => idSet.has(player.id));
+}
+
 export function PartidaClient({ slot }: PartidaClientProps) {
   const router = useRouter();
   const [save, setSave] = useState<ReturnType<typeof loadCareerSlot>>(null);
@@ -106,6 +116,13 @@ export function PartidaClient({ slot }: PartidaClientProps) {
   const [concluindoRodada, setConcluindoRodada] = useState(false);
   const [pulandoParaResultado, setPulandoParaResultado] = useState(false);
   const [aguardandoPasse, setAguardandoPasse] = useState(false);
+  const [chuteLivrePara, setChuteLivrePara] = useState<MatchTeam | null>(null);
+  const [emCampoProtagonistaIds, setEmCampoProtagonistaIds] = useState<string[]>([]);
+  const [emCampoAdversarioIds, setEmCampoAdversarioIds] = useState<string[]>([]);
+  const [substituicoesAutomaticas, setSubstituicoesAutomaticas] = useState<{ protagonista: number; adversario: number }>({
+    protagonista: 0,
+    adversario: 0,
+  });
   const [uniformeProtagonista, setUniformeProtagonista] = useState<UniformeEscolha>('primario');
   const [uniformeAdversario, setUniformeAdversario] = useState<UniformeEscolha>('primario');
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -131,11 +148,15 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     setMinutoAtual(0);
     minutoRef.current = 0;
     setAcrescimos1Tempo(rollD5());
-    setAcrescimos2Tempo(rollD10());
+    setAcrescimos2Tempo(rollD5());
     setPartidaIniciada(false);
     setPartidaFinalizada(false);
     setPulandoParaResultado(false);
     setAguardandoPasse(false);
+    setChuteLivrePara(null);
+    setEmCampoProtagonistaIds([]);
+    setEmCampoAdversarioIds([]);
+    setSubstituicoesAutomaticas({ protagonista: 0, adversario: 0 });
     setUniformeProtagonista('primario');
     setUniformeAdversario('primario');
     setLog([]);
@@ -148,13 +169,15 @@ export function PartidaClient({ slot }: PartidaClientProps) {
   const nextMatch = save && team ? getNextCareerMatch(save, team.id) : null;
   const opponentTeam = nextMatch?.opponent ?? null;
 
+  const protagonistas = useMemo(() => (team ? team.jogadores : []), [team]);
+  const adversarios = useMemo(() => (opponentTeam ? opponentTeam.jogadores : []), [opponentTeam]);
   const protagonistasTitulares = useMemo(
-    () => (team ? team.jogadores.filter((player) => player.titular) : []),
-    [team],
+    () => getPlayersOnField(protagonistas, emCampoProtagonistaIds),
+    [protagonistas, emCampoProtagonistaIds],
   );
   const adversariosTitulares = useMemo(
-    () => (opponentTeam ? opponentTeam.jogadores.filter((player) => player.titular) : []),
-    [opponentTeam],
+    () => getPlayersOnField(adversarios, emCampoAdversarioIds),
+    [adversarios, emCampoAdversarioIds],
   );
   const protagonista = useMemo(
     () => protagonistasTitulares.find((player) => player.isProtagonista) ?? null,
@@ -225,12 +248,136 @@ export function PartidaClient({ slot }: PartidaClientProps) {
   const chooseKickoffCarrier = (side: MatchTeam) =>
     chooseBallCarrier(side, 'MC', { preferredPositions: ['MF', 'FW'] });
 
-  const escolherDefensor = (defendingSide: MatchTeam, zone: ZonaCampo): TeamSquadPlayer | null => {
+  const escolherDefensor = (defendingSide: MatchTeam, zone: ZonaCampo, action: MatchAction): TeamSquadPlayer | null => {
     const pool = getTitulares(defendingSide);
     if (pool.length === 0) return null;
     const allowed = POSICOES_POR_ZONA[zoneForSide(defendingSide, zone)] ?? ['DF', 'MF', 'FW'];
-    const candidates = pool.filter((player) => allowed.includes(player.posicao));
-    return pickRandom(candidates.length > 0 ? candidates : pool);
+    const candidates = pool.filter((player) => allowed.includes(player.posicao) && player.posicao !== 'GK');
+    const source = candidates.length > 0 ? candidates : pool.filter((player) => player.posicao !== 'GK');
+    if (source.length === 0) return pickRandom(pool);
+
+    let bestScore = Number.NEGATIVE_INFINITY;
+    let best: TeamSquadPlayer | null = null;
+    for (const player of source) {
+      const attrs = player.atributos ?? fallbackAttributes();
+      const energia = getEnergy(energiaPorJogador, player.id);
+      const atributoDefensivo =
+        action === 'chute'
+          ? attrs.potencia
+          : action === 'drible'
+            ? attrs.rapidez
+            : attrs.tecnica;
+      const bonusPosicao = player.posicao === 'DF' ? 1.2 : player.posicao === 'MF' ? 0.5 : 0;
+      const score = atributoDefensivo * 2.2 + energia * 0.4 + bonusPosicao + Math.random() * 0.3;
+      if (score > bestScore) {
+        bestScore = score;
+        best = player;
+      }
+    }
+
+    return best;
+  };
+
+  const choosePassReceiver = (
+    side: MatchTeam,
+    zone: ZonaCampo,
+    attackerId: string,
+    forcedReceiverId?: string,
+  ): TeamSquadPlayer | null => {
+    const pool = getTitulares(side).filter((player) => player.id !== attackerId && player.posicao !== 'GK');
+    if (pool.length === 0) return null;
+
+    if (forcedReceiverId) {
+      return pool.find((player) => player.id === forcedReceiverId) ?? null;
+    }
+
+    const contexto = zoneForSide(side, zone);
+    let best: TeamSquadPlayer | null = null;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    for (const candidate of pool) {
+      const attrs = candidate.atributos ?? fallbackAttributes();
+      const energia = getEnergy(energiaPorJogador, candidate.id);
+      const bonusPosicao =
+        contexto === 'DF1'
+          ? candidate.posicao === 'MF'
+            ? 2.8
+            : candidate.posicao === 'DF'
+              ? 1.5
+              : 0.8
+          : contexto === 'MI1'
+            ? candidate.posicao === 'MF'
+              ? 2.6
+              : candidate.posicao === 'FW'
+                ? 1.8
+                : 0.9
+            : contexto === 'MC'
+              ? candidate.posicao === 'FW'
+                ? 2.5
+                : candidate.posicao === 'MF'
+                  ? 2.2
+                  : 0.8
+              : candidate.posicao === 'FW'
+                ? 3
+                : candidate.posicao === 'MF'
+                  ? 1.6
+                  : 0.4;
+      const score = attrs.tecnica * 1.8 + energia * 0.35 + bonusPosicao + Math.random() * 0.25;
+      if (score > bestScore) {
+        bestScore = score;
+        best = candidate;
+      }
+    }
+
+    return best;
+  };
+
+  const executarSubstituicaoAutomatica = (side: MatchTeam) => {
+    const roster = side === 'protagonista' ? protagonistas : adversarios;
+    const onFieldIds = side === 'protagonista' ? emCampoProtagonistaIds : emCampoAdversarioIds;
+    const restantes = MAX_AUTO_SUBS_PER_TEAM - substituicoesAutomaticas[side];
+    if (restantes <= 0 || roster.length === 0 || onFieldIds.length === 0) return;
+
+    let nextOnFieldIds = [...onFieldIds];
+    let realizadas = 0;
+
+    for (const titularId of onFieldIds) {
+      if (realizadas >= restantes) break;
+      const titular = roster.find((player) => player.id === titularId);
+      if (!titular) continue;
+
+      const energiaTitular = getEnergy(energiaPorJogador, titular.id);
+      if (energiaTitular > AUTO_SUB_THRESHOLD) continue;
+
+      const reservasMesmoCargo = roster
+        .filter((player) => !nextOnFieldIds.includes(player.id) && player.posicao === titular.posicao)
+        .map((player) => ({ player, energia: getEnergy(energiaPorJogador, player.id) }))
+        .filter(({ energia }) => energia >= AUTO_SUB_MIN_ENERGY)
+        .sort((a, b) => b.energia - a.energia);
+
+      const melhorReserva = reservasMesmoCargo[0]?.player;
+      if (!melhorReserva) continue;
+
+      nextOnFieldIds = nextOnFieldIds.map((id) => (id === titular.id ? melhorReserva.id : id));
+      realizadas += 1;
+      appendLog([
+        { text: side === 'protagonista' ? team?.nome ?? 'Seu time' : opponentTeam?.nome ?? 'Adversário', side },
+        { text: ': substituição automática por estamina — sai ' },
+        { text: titular.nome, side },
+        { text: ', entra ' },
+        { text: melhorReserva.nome, side },
+        { text: '.' },
+      ]);
+    }
+
+    if (realizadas === 0) return;
+
+    if (side === 'protagonista') {
+      setEmCampoProtagonistaIds(nextOnFieldIds);
+    } else {
+      setEmCampoAdversarioIds(nextOnFieldIds);
+    }
+    setSubstituicoesAutomaticas((current) => ({ ...current, [side]: current[side] + realizadas }));
   };
 
   const chooseRecoveredCarrier = (defendingSide: MatchTeam, defender: TeamSquadPlayer | null): TeamSquadPlayer | null => {
@@ -260,6 +407,25 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     }
   };
 
+  useEffect(() => {
+    if (!partidaIniciada || partidaFinalizada || minutoAtual <= fimPrimeiroTempo) return;
+    executarSubstituicaoAutomatica('protagonista');
+    executarSubstituicaoAutomatica('adversario');
+  }, [
+    adversarios,
+    emCampoAdversarioIds,
+    emCampoProtagonistaIds,
+    energiaPorJogador,
+    fimPrimeiroTempo,
+    minutoAtual,
+    opponentTeam?.nome,
+    partidaFinalizada,
+    partidaIniciada,
+    protagonistas,
+    substituicoesAutomaticas,
+    team?.nome,
+  ]);
+
   const resolveGoal = (attackingSide: MatchTeam, atacanteNome: string, goleiroNome: string) => {
     const concedingSide: MatchTeam = attackingSide === 'protagonista' ? 'adversario' : 'protagonista';
     if (attackingSide === 'protagonista') {
@@ -287,7 +453,9 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     if (!attacker) return;
 
     const defendingSide: MatchTeam = side === 'protagonista' ? 'adversario' : 'protagonista';
-    const defender = escolherDefensor(defendingSide, zonaAtual);
+    const finalZone = zoneForSide(side, zonaAtual) === 'DF2';
+    const chuteSemBloqueio = action === 'chute' && chuteLivrePara === side && finalZone;
+    const defender = chuteSemBloqueio ? null : escolherDefensor(defendingSide, zonaAtual, action);
     const attackerAttrs = attacker.atributos ?? fallbackAttributes();
     const defenderAttrs = defender?.atributos ?? fallbackAttributes();
     const energiaAtacante = getEnergy(energiaPorJogador, attacker.id);
@@ -309,13 +477,16 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       ? { ...attackerAttrs, potencia: 0 }
       : attackerAttrs;
 
-    const confronto = executarConfronto(action, adjustedAttackerAttrs, defenderAttrs, energiaAtacante, energiaDefensor);
-    setEnergiaPorJogador((current) => spendEnergy(current, [attacker.id, defender?.id]));
+    const confronto = chuteSemBloqueio
+      ? { vencedor: 'atacante' as const }
+      : executarConfronto(action, adjustedAttackerAttrs, defenderAttrs, energiaAtacante, energiaDefensor);
+    setEnergiaPorJogador((current) => spendEnergy(current, [attacker.id, chuteSemBloqueio ? null : defender?.id]));
 
     if (confronto.vencedor === 'defensor') {
       const newCarrier = chooseRecoveredCarrier(defendingSide, defender);
       setTimeComPosse(defendingSide);
       setPortadorId(newCarrier?.id ?? defender?.id ?? null);
+      setChuteLivrePara(null);
 
       if (action === 'chute') {
         avancarMinuto([
@@ -348,6 +519,7 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       setZonaAtual((current) => advanceZone(side, current));
       setTimeComPosse(side);
       setPortadorId(attacker.id);
+      setChuteLivrePara(finalZone ? side : null);
       avancarMinuto([
         { text: attacker.nome, side },
         { text: ' driblou ' },
@@ -358,15 +530,17 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     }
 
     if (action === 'passe') {
-      const receiverPool = getTitulares(side).filter((player) => player.id !== attacker.id && player.posicao !== 'GK');
-      const receiver =
-        side === 'protagonista'
-          ? (passeDestinoId ? receiverPool.find((player) => player.id === passeDestinoId) ?? null : pickRandom(receiverPool))
-          : pickRandom(receiverPool);
+      const receiver = choosePassReceiver(
+        side,
+        zonaAtual,
+        attacker.id,
+        side === 'protagonista' ? passeDestinoId : undefined,
+      );
 
       setZonaAtual((current) => advanceZone(side, current));
       setTimeComPosse(side);
       setPortadorId(receiver?.id ?? attacker.id);
+      setChuteLivrePara(finalZone ? side : null);
       avancarMinuto([
         { text: attacker.nome, side },
         { text: ' passou a bola para ' },
@@ -392,38 +566,36 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     setEnergiaPorJogador((current) => spendEnergy(current, [goalkeeper?.id]));
 
     if (dueloGoleiro.vencedor === 'atacante') {
+      setChuteLivrePara(null);
       resolveGoal(side, attacker.nome, goleiroNome);
       return;
     }
 
     if (dueloGoleiro.acaoGoleiro === 'espalme') {
       const reboundWinner: MatchTeam = Math.random() < 0.5 ? 'protagonista' : 'adversario';
-      const newCarrier =
-        reboundWinner === 'protagonista'
-          ? chooseBallCarrier('protagonista', 'MC', { excludeProtagonist: true })
-          : chooseBallCarrier('adversario', 'MC');
+      const reboundZone: ZonaCampo = defendingSide === 'protagonista' ? 'DF1' : 'DF2';
+      const newCarrier = chooseBallCarrier(reboundWinner, reboundZone);
       setTimeComPosse(reboundWinner);
       setPortadorId(newCarrier?.id ?? null);
-      setZonaAtual('MC');
+      setZonaAtual(reboundZone);
+      setChuteLivrePara(null);
       avancarMinuto([
         { text: 'Defesa de espalme de ' },
         { text: goleiroNome, side: defendingSide },
-        { text: '! Bola viva no meio-campo.' },
+        { text: '! A sobra ficou na área.' },
       ]);
       return;
     }
 
-    const newCarrier =
-      defendingSide === 'protagonista'
-        ? chooseBallCarrier('protagonista', 'MC', { excludeProtagonist: true })
-        : chooseBallCarrier('adversario', 'MC');
+    const newCarrier = chooseBallCarrier(defendingSide, 'MC', { preferredPositions: ['MF', 'FW', 'DF'] });
     setTimeComPosse(defendingSide);
     setPortadorId(newCarrier?.id ?? null);
     setZonaAtual('MC');
+    setChuteLivrePara(null);
     avancarMinuto([
       { text: 'Captura segura de ' },
       { text: goleiroNome, side: defendingSide },
-      { text: '.' },
+      { text: '. Reposição para o meio-campo.' },
     ]);
   };
 
@@ -496,7 +668,11 @@ export function PartidaClient({ slot }: PartidaClientProps) {
     if (!team || !opponentTeam || !nextMatch) return;
     const kickoffSide: MatchTeam = nextMatch.isHome ? 'protagonista' : 'adversario';
     const kickoff = chooseKickoffCarrier(kickoffSide);
-    setEnergiaPorJogador(createEnergyMap([...protagonistasTitulares, ...adversariosTitulares]));
+    setEmCampoProtagonistaIds(protagonistas.filter((player) => player.titular).map((player) => player.id));
+    setEmCampoAdversarioIds(adversarios.filter((player) => player.titular).map((player) => player.id));
+    setSubstituicoesAutomaticas({ protagonista: 0, adversario: 0 });
+    setChuteLivrePara(null);
+    setEnergiaPorJogador(createEnergyMap([...protagonistas, ...adversarios]));
     setTimeComPosse(kickoffSide);
     setPortadorId(kickoff?.id ?? null);
     setPartidaIniciada(true);
@@ -540,7 +716,11 @@ export function PartidaClient({ slot }: PartidaClientProps) {
       <h3 className="text-base font-semibold" style={{ color: corDoTime(side) }}>{title}</h3>
       <div className="mt-3 space-y-2 text-sm">
         {[...players]
-          .sort((a, b) => a.numero - b.numero)
+          .sort((a, b) => {
+            const byPosition = POSICAO_ORDEM[a.posicao] - POSICAO_ORDEM[b.posicao];
+            if (byPosition !== 0) return byPosition;
+            return a.numero - b.numero;
+          })
           .map((player) => (
             <div
               key={player.id}

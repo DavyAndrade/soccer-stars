@@ -120,7 +120,7 @@ Defensor: d20 + Atributo Defensivo
 | **MI2** | MF, FW |
 | **DF2** | MF, FW |
 
-**Regra**: Quando há confronto, a IA escolhe aleatoriamente um jogador adversário dentre as posições que podem atuar naquela zona.
+**Regra**: Quando há confronto, a IA prioriza defensores mais aptos ao duelo (atributo defensivo da jogada + estamina), respeitando as posições válidas da zona.
 
 ---
 
@@ -131,10 +131,11 @@ Defensor: d20 + Atributo Defensivo
 - **Confronto em MI2**: `d20 puro` vs `d20 + Bloqueio`
 - **Confronto em DF2**: `d20 + Chute` vs `d20 + Bloqueio`
 - **Se vencer bloqueio**: Goleiro reage
-  - **Captura vence**: Goleiro fica com a posse (pode passar para zona MI)
+  - **Captura vence**: Goleiro fica com a posse e repõe para o próprio time no MC
   - **Captura perde**: GOL!
-  - **Espalme vence**: Bola sobra 50/50 (random para qualquer time)
+  - **Espalme vence**: Bola sobra 50/50 na área defendida (DF1 ou DF2, conforme o lado)
   - **Espalme perde**: GOL!
+- **Regra do último defensor**: após drible/passe bem-sucedido na zona final (DF2 para quem ataca), o próximo chute sai livre de bloqueio e vai direto para a reação do goleiro.
 
 #### Drible
 - **Zonas**: Qualquer zona (exceto já estar em DF2 atacando)
@@ -222,6 +223,7 @@ Para cada minuto (1 até 90 + acréscimos):
   Obs:
     - Há delay narrativo de 2s entre lances no log
     - Existe opção "Pular para resultado" para simular o restante da partida
+    - Substituições automáticas podem ocorrer por estamina baixa para evitar jogadores exaustos em campo
   
   SE minuto == 45 + acréscimos 1º:
     → INTERVALO (regenera +5 energia, max 10)
@@ -232,12 +234,12 @@ Para cada minuto (1 até 90 + acréscimos):
 
 #### IA dos NPCs
 
-**Estratégia de Decisão** (ordem de prioridade):
-1. **Se em DF2**: Sempre chutar (chance de gol)
-2. **Se energia baixa (<3)**: reduzir risco (menos drible/chute forçado)
-3. **Se perdendo e tempo < 10min**: arriscar dribles/chutes
-4. **Se vencendo e tempo < 10min**: preferir passes seguros
-5. **Caso contrário**: escolha ponderada entre chute/drible/passe
+**Estratégia de Decisão** (heurística ponderada):
+1. **Zona**: defesa privilegia passe seguro; último terço aumenta agressividade
+2. **Estamina**: baixa estamina reduz drible/forçação e aumenta passe
+3. **Placar + tempo**: perdendo no fim aumenta risco (principalmente chute); vencendo no fim prioriza segurança
+4. **Atributos**: Potência favorece chute, Rapidez favorece drible, Técnica favorece passe
+5. **Seleção final**: ponderação com tendência a escolher a ação claramente dominante
 
 **Defesa**: Sempre automática baseada no mapeamento.
 

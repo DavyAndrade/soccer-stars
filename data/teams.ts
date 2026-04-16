@@ -47,10 +47,14 @@ const NACIONALIDADES = ['Japão', 'Coreia do Sul', 'Brasil', 'Argentina', 'Espan
 const FIRST_NAMES = [
   'Haruto', 'Yuki', 'Ren', 'Sora', 'Riku', 'Aoi', 'Daichi', 'Takumi', 'Kaito', 'Shun',
   'Keita', 'Hiro', 'Ryo', 'Tatsuya', 'Akira', 'Hayato', 'Yuma', 'Koji', 'Naoki', 'Issei',
+  'Yuta', 'Kazuki', 'Masato', 'Ryota', 'Shota', 'Tomoya', 'Kenta', 'Koki', 'Ryusei', 'Yuji',
+  'Renta', 'Minato', 'Hinata', 'Souta', 'Itsuki', 'Raul', 'Thiago', 'Mateo', 'Iker', 'Luca',
 ];
 const LAST_NAMES = [
   'Sato', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato',
   'Yoshida', 'Yamada', 'Sasaki', 'Yamaguchi', 'Matsumoto', 'Inoue', 'Kimura', 'Shimizu', 'Hayashi', 'Ogawa',
+  'Mori', 'Abe', 'Sakamoto', 'Fujita', 'Okada', 'Miyazaki', 'Nishimura', 'Andrade', 'Silva', 'Santos',
+  'Garcia', 'Fernandez', 'Pereira', 'Costa', 'Matsuda', 'Kishimoto', 'Noguchi', 'Fukuda', 'Yokoyama', 'Nakajima',
 ];
 
 function hashString(value: string): number {
@@ -118,6 +122,7 @@ export function applyFormationToSquad(jogadores: TeamSquadPlayer[], formacaoNome
     grouped[posicao].slice(0, targets[posicao]).forEach((jogador) => titulares.add(jogador.id));
   });
 
+  // Garante 11 titulares completos caso um elenco legado esteja inconsistente.
   if (titulares.size < 11) {
     const reservas = sorted.filter((jogador) => !titulares.has(jogador.id));
     reservas.slice(0, 11 - titulares.size).forEach((jogador) => titulares.add(jogador.id));
@@ -132,16 +137,29 @@ function generateSquad(teamId: string): TeamSquadPlayer[] {
     'GK', 'GK', 'GK',
     'DF', 'DF', 'DF', 'DF', 'DF', 'DF', 'DF', 'DF',
     'MF', 'MF', 'MF', 'MF', 'MF', 'MF', 'MF', 'MF',
-    'FW', 'FW', 'FW', 'FW',
+    'FW', 'FW', 'FW', 'FW', 'FW', 'FW', 'FW', 'FW',
   ];
-
-  const numbersPool = Array.from({ length: 30 }, (_, i) => i + 1);
   const used = new Set<number>();
 
+  const preferredNumbersByPosition: Record<PlayerPosition, number[]> = {
+    GK: [1, 12, 21],
+    DF: [2, 3, 4, 5, 6, 13, 14, 15],
+    MF: [7, 8, 10, 16, 18, 23, 24, 26],
+    FW: [9, 11, 17, 19, 20, 22, 25, 30],
+  };
+
   return positions.map((posicao, index) => {
-    let numero = pick(rng, numbersPool);
-    while (used.has(numero)) {
-      numero = pick(rng, numbersPool);
+    const preferredPool = preferredNumbersByPosition[posicao].filter((numero) => !used.has(numero));
+    const fallbackPool = Array.from({ length: 99 }, (_, i) => i + 1).filter((numero) => {
+      if (used.has(numero)) return false;
+      if (posicao === 'GK' && numero === 10) return false;
+      return true;
+    });
+    const sourcePool = preferredPool.length > 0 ? preferredPool : fallbackPool;
+    let numero = sourcePool[Math.floor(rng() * sourcePool.length)] ?? 99;
+
+    while (used.has(numero) || (posicao === 'GK' && numero === 10)) {
+      numero = sourcePool[Math.floor(rng() * sourcePool.length)] ?? 99;
     }
     used.add(numero);
 
@@ -172,7 +190,7 @@ function pickInitialFormation(teamId: string): FormacaoNome {
 
 function calculateAvailableNumbers(squad: TeamSquadPlayer[]): number[] {
   const used = new Set(squad.map((p) => p.numero));
-  return Array.from({ length: 30 }, (_, i) => i + 1).filter((n) => !used.has(n));
+  return Array.from({ length: 99 }, (_, i) => i + 1).filter((n) => !used.has(n));
 }
 
 export function getInitialTeams(): Time[] {

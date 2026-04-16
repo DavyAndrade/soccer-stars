@@ -16,6 +16,13 @@ const LEAGUE_NAME_BY_CONFERENCE = {
   WEST: 'Prince Takamado U18 Premier League West',
 } as const;
 
+const POSITION_LABEL = {
+  GK: 'Goleiros',
+  DF: 'Defensores',
+  MF: 'Meio-campistas',
+  FW: 'Atacantes',
+} as const;
+
 function hexToRgba(hex: string, alpha: number): string {
   const normalized = hex.replace('#', '');
   if (normalized.length !== 6) {
@@ -101,6 +108,7 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
   const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
   const [save, setSave] = useState<ReturnType<typeof loadCareerSlot>>(null);
+  const [selectedForSwap, setSelectedForSwap] = useState<{ id: string; titular: boolean; nome: string } | null>(null);
 
   useEffect(() => {
     setSave(loadCareerSlot(slot));
@@ -121,6 +129,10 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
     if (!save || !team) return [];
     return getConferenceStandings(save, team.conferencia);
   }, [save, team]);
+
+  useEffect(() => {
+    setSelectedForSwap(null);
+  }, [teamDraft?.id]);
 
   if (!isHydrated) {
     return (
@@ -148,21 +160,48 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
   const rowHighlightStyle = { backgroundColor: hexToRgba(teamPrimary, 0.16) };
   const formacoes = Object.keys(FORMACOES) as FormacaoNome[];
   const titularesCount = teamDraft.jogadores.filter((jogador) => jogador.titular).length;
-  const titulares = teamDraft.jogadores.filter((jogador) => jogador.titular);
   const reservas = teamDraft.jogadores.filter((jogador) => !jogador.titular);
   const positionCounts = countPositions(teamDraft.jogadores);
   const field = splitLineupForField(teamDraft.jogadores, teamDraft.formacao.nome);
+  const elencoPorPosicao = {
+    GK: [...teamDraft.jogadores].filter((jogador) => jogador.posicao === 'GK').sort((a, b) => a.numero - b.numero),
+    DF: [...teamDraft.jogadores].filter((jogador) => jogador.posicao === 'DF').sort((a, b) => a.numero - b.numero),
+    MF: [...teamDraft.jogadores].filter((jogador) => jogador.posicao === 'MF').sort((a, b) => a.numero - b.numero),
+    FW: [...teamDraft.jogadores].filter((jogador) => jogador.posicao === 'FW').sort((a, b) => a.numero - b.numero),
+  };
 
-  const handleToggleTitular = (playerId: string) => {
+  const handleSelectForSwap = (playerId: string, titular: boolean, nome: string) => {
+    if (!teamDraft) return;
+
+    if (!selectedForSwap) {
+      setSelectedForSwap({ id: playerId, titular, nome });
+      return;
+    }
+
+    if (selectedForSwap.id === playerId) {
+      setSelectedForSwap(null);
+      return;
+    }
+
+    if (selectedForSwap.titular === titular) {
+      setSelectedForSwap({ id: playerId, titular, nome });
+      return;
+    }
+
     setTeamDraft((current) => {
       if (!current) return current;
       return {
         ...current,
         jogadores: current.jogadores.map((jogador) =>
-          jogador.id === playerId ? { ...jogador, titular: !jogador.titular } : jogador
+          jogador.id === selectedForSwap.id
+            ? { ...jogador, titular: !selectedForSwap.titular }
+            : jogador.id === playerId
+              ? { ...jogador, titular: !titular }
+              : jogador
         ),
       };
     });
+    setSelectedForSwap(null);
   };
 
   const handleChangeFormacao = (formacaoNome: FormacaoNome) => {
@@ -184,6 +223,7 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
       titularesIds: teamDraft.jogadores.filter((jogador) => jogador.titular).map((jogador) => jogador.id),
     });
     if (updated) setSave(updated);
+    setSelectedForSwap(null);
   };
 
   return (
@@ -255,7 +295,34 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
         </article>
         </section>
 
-        <section className="rounded-xl border p-4" style={surfaceStyle}>
+        <section className="space-y-4">
+          <article className="rounded-xl border p-4" style={surfaceStyle}>
+            <h2 className="text-lg font-semibold">Elenco</h2>
+            <div className="mt-4 space-y-4">
+              {(Object.keys(POSITION_LABEL) as Array<keyof typeof POSITION_LABEL>).map((posicao) => (
+                <div key={posicao} className="rounded-lg border border-border p-3">
+                  <h3 className="mb-2 text-sm font-semibold">
+                    {POSITION_LABEL[posicao]} ({elencoPorPosicao[posicao].length})
+                  </h3>
+                  <div className="space-y-2">
+                    {elencoPorPosicao[posicao].map((jogador) => (
+                      <div
+                        key={jogador.id}
+                        className="flex items-center justify-between rounded-md border border-border px-2 py-1.5 text-sm"
+                      >
+                        <span>#{jogador.numero} {jogador.nome}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {jogador.titular ? 'Titular' : 'Reserva'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+        
+        <article className="rounded-xl border p-4" style={surfaceStyle}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">Escalação</h2>
           <div className="flex items-center gap-2 text-sm">
@@ -279,41 +346,38 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
           Selecione exatamente 11 titulares. Total atual: <strong>{titularesCount}/11</strong>
         </p>
 
-        <div className="mt-4 rounded-xl border border-border bg-emerald-900/20 p-4">
-          <div className="mx-auto flex max-w-3xl flex-col gap-5 rounded-xl border border-white/20 bg-emerald-700/20 p-4">
-            <div className="flex items-center justify-center gap-2">
-              {field.goleiro ? (
-                <div className="rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs">
-                  #{field.goleiro.numero} {field.goleiro.nome}
-                </div>
-              ) : (
-                <div className="text-xs text-white/70">Sem GK titular</div>
-              )}
-            </div>
-            {field.rows.map((row, idx) => (
-              <div key={`${row[0]?.id ?? 'row'}-${idx}`} className="flex flex-wrap items-center justify-center gap-2">
-                {row.map((jogador) => (
-                  <div key={jogador.id} className="rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs">
-                    #{jogador.numero} {jogador.nome}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <article className="rounded-lg border border-border p-3">
-            <h3 className="mb-2 text-sm font-semibold">Titulares ({titulares.length})</h3>
-            <div className="space-y-2">
-              {titulares.map((jogador) => (
-                <div key={jogador.id} className="flex items-center justify-between rounded-md border border-border px-2 py-1.5 text-sm">
-                  <span>#{jogador.numero} {jogador.nome} ({jogador.posicao})</span>
-                  <Button size="sm" variant="outline" onClick={() => handleToggleTitular(jogador.id)}>
-                    Reserva
-                  </Button>
+        <div className="mt-4 grid gap-4 md:grid-cols-[2fr_1fr]">
+          <article className="rounded-xl border border-border bg-emerald-900/20 p-4">
+            <div className="mx-auto flex max-w-3xl flex-col h-full justify-around gap-5 rounded-xl border border-white/20 bg-emerald-700/20 p-4">
+              {[...field.rows].reverse().map((row, idx) => (
+                <div key={`${row[0]?.id ?? 'row'}-${idx}`} className="flex flex-wrap items-center justify-center gap-2">
+                  {row.map((jogador) => (
+                    <button
+                      key={jogador.id}
+                      type="button"
+                      onClick={() => handleSelectForSwap(jogador.id, true, jogador.nome)}
+                      className="rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs transition-colors hover:bg-white/20"
+                      style={selectedForSwap?.id === jogador.id ? { borderColor: teamPrimary, backgroundColor: hexToRgba(teamPrimary, 0.2) } : undefined}
+                    >
+                      #{jogador.numero} {jogador.nome}
+                    </button>
+                  ))}
                 </div>
               ))}
+              <div className="flex items-center justify-center gap-2">
+                {field.goleiro ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectForSwap(field.goleiro.id, true, field.goleiro.nome)}
+                    className="rounded-md border border-white/30 bg-white/10 px-2 py-1 text-xs transition-colors hover:bg-white/20"
+                    style={selectedForSwap?.id === field.goleiro.id ? { borderColor: teamPrimary, backgroundColor: hexToRgba(teamPrimary, 0.2) } : undefined}
+                  >
+                    #{field.goleiro.numero} {field.goleiro.nome}
+                  </button>
+                ) : (
+                  <div className="text-xs text-white/70">Sem GK titular</div>
+                )}
+              </div>
             </div>
           </article>
 
@@ -321,20 +385,31 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
             <h3 className="mb-2 text-sm font-semibold">Reservas ({reservas.length})</h3>
             <div className="space-y-2">
               {reservas.map((jogador) => (
-                <div key={jogador.id} className="flex items-center justify-between rounded-md border border-border px-2 py-1.5 text-sm">
+                <button
+                  key={jogador.id}
+                  type="button"
+                  onClick={() => handleSelectForSwap(jogador.id, false, jogador.nome)}
+                  className="flex w-full items-center justify-between rounded-md border border-border px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/40"
+                  style={selectedForSwap?.id === jogador.id ? { borderColor: teamPrimary, backgroundColor: hexToRgba(teamPrimary, 0.16) } : undefined}
+                >
                   <span>#{jogador.numero} {jogador.nome} ({jogador.posicao})</span>
-                  <Button size="sm" variant="outline" onClick={() => handleToggleTitular(jogador.id)}>
-                    Titular
-                  </Button>
-                </div>
+                  <span className="text-xs text-muted-foreground">Reserva</span>
+                </button>
               ))}
             </div>
           </article>
         </div>
 
+        <p className="mt-3 text-sm text-muted-foreground">
+          {selectedForSwap
+            ? `Selecionado: ${selectedForSwap.nome} (${selectedForSwap.titular ? 'Titular' : 'Reserva'}). Agora escolha um jogador do grupo oposto para substituir.`
+            : 'Selecione um titular ou reserva para iniciar uma substituição.'}
+        </p>
+
         <Button className="mt-4" disabled={titularesCount !== 11} onClick={handleSaveEscalacao}>
           Salvar Escalação
         </Button>
+        </article>
         </section>
       </div>
     </main>
