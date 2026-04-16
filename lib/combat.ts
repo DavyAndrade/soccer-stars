@@ -1,10 +1,22 @@
 import type { 
-  AcaoOfensiva, 
-  AcaoDefensiva, 
   PlayerAttributes,
   GoalkeeperAction
 } from '@/types/player';
-import type { ResultadoConfronto } from '@/types/match';
+
+type AcaoOfensiva = 'chute' | 'drible' | 'passe';
+type AcaoDefensiva = 'bloqueio' | 'desarme' | 'interceptacao';
+
+interface ResultadoConfronto {
+  vencedor: 'atacante' | 'defensor';
+  acaoOfensiva: AcaoOfensiva;
+  acaoDefensiva: AcaoDefensiva;
+  rolagemAtacante: number;
+  rolagemDefensor: number;
+  totalAtacante: number;
+  totalDefensor: number;
+  atributoAtacante: number;
+  atributoDefensor: number;
+}
 
 /**
  * Mapeamento de ação ofensiva para ação defensiva

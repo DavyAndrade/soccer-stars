@@ -19,8 +19,8 @@ interface TimeComEstatisticas extends Time {
  */
 interface ResultadoPartida {
   rodada: number;
-  timeCasaId: number;
-  timeVisitanteId: number;
+  timeCasaId: string | number;
+  timeVisitanteId: string | number;
   golsCasa: number;
   golsVisitante: number;
 }
@@ -33,10 +33,10 @@ interface LeagueState {
   times: TimeComEstatisticas[];
   resultados: ResultadoPartida[];
   rodadaAtual: number;
-  timeProtagonista: number | null;
+  timeProtagonista: string | number | null;
 
   // Actions
-  inicializarLiga: (times: Time[], timeProtagonista: number) => void;
+  inicializarLiga: (times: Time[], timeProtagonista: string | number) => void;
   registrarResultado: (resultado: ResultadoPartida) => void;
   avancarRodada: () => void;
   reset: () => void;
@@ -99,7 +99,7 @@ export const useLeagueStore = create<LeagueState>((set) => ({
     // Atualizar estatísticas
     const timesAtualizados = state.times.map((time) => {
       // Time da casa
-      if (time.id === timeCasaId) {
+      if (String(time.id) === String(timeCasaId)) {
         return {
           ...time,
           pontos: time.pontos + (casaVenceu ? 3 : empate ? 1 : 0),
@@ -113,7 +113,7 @@ export const useLeagueStore = create<LeagueState>((set) => ({
       }
 
       // Time visitante
-      if (time.id === timeVisitanteId) {
+      if (String(time.id) === String(timeVisitanteId)) {
         return {
           ...time,
           pontos: time.pontos + (visitanteVenceu ? 3 : empate ? 1 : 0),

@@ -40,16 +40,15 @@ describe('storage-layer', () => {
       const playerData = {
         nome: 'Ashito Aoi',
         posicao: 'FW' as const,
+        timeId: 'tokyo-verdy-u18',
+        numeroCamisa: 10,
+        nacionalidade: 'Japão',
+        idade: 16,
         atributos: {
           potencia: 5,
-          drible: 5,
-          passe: 5,
-          bloqueio: 1,
-          desarme: 1,
-          interceptacao: 1,
+          rapidez: 3,
+          tecnica: 1,
         },
-        time: 'Tokyo Esperion',
-        numeroCamisa: 10,
       };
 
       savePlayerData(playerData);
@@ -63,27 +62,29 @@ describe('storage-layer', () => {
       const firstData = {
         nome: 'Player 1',
         posicao: 'DF' as const,
-        atributos: {
-          chute: 1,
-          drible: 1,
-          passe: 1,
-          bloqueio: 5,
-          desarme: 5,
-          interceptacao: 5,
-        },
-        time: 'Time A',
+        timeId: 'kashiwa-reysol-u18',
         numeroCamisa: 4,
+        nacionalidade: 'Japão',
+        idade: 15,
+        atributos: {
+          potencia: 5,
+          rapidez: 3,
+          tecnica: 1,
+        },
       };
 
       const secondData = {
         nome: 'Player 2',
         posicao: 'GK' as const,
-        atributos: {
-          captura: 4,
-          espalme: 2,
-        },
-        time: 'Time B',
+        timeId: 'vissel-kobe-u18',
         numeroCamisa: 1,
+        nacionalidade: 'Japão',
+        idade: 16,
+        atributos: {
+          potencia: 3,
+          rapidez: 3,
+          tecnica: 3,
+        },
       };
 
       savePlayerData(firstData);
@@ -99,6 +100,10 @@ describe('storage-layer', () => {
       const playerData = {
         nome: 'Ashito Aoi',
         posicao: 'FW' as const,
+        timeId: 'tokyo-verdy-u18',
+        numeroCamisa: 10,
+        nacionalidade: 'Japão',
+        idade: 16,
         atributos: {
           potencia: 5,
           rapidez: 3,
@@ -207,12 +212,14 @@ describe('storage-layer', () => {
     it('deve limpar todos os dados do localStorage', () => {
       localStorage.setItem(STORAGE_KEYS.PLAYER, '{}');
       localStorage.setItem(STORAGE_KEYS.LEAGUE, '{}');
+      localStorage.setItem(STORAGE_KEYS.SAVE_SLOTS, '{}');
       localStorage.setItem('other-key', 'other-value');
 
       clearAllData();
 
       expect(localStorage.getItem(STORAGE_KEYS.PLAYER)).toBeNull();
       expect(localStorage.getItem(STORAGE_KEYS.LEAGUE)).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.SAVE_SLOTS)).toBeNull();
       // Outras keys não relacionadas devem permanecer
       expect(localStorage.getItem('other-key')).toBe('other-value');
     });
@@ -222,6 +229,7 @@ describe('storage-layer', () => {
     it('deve ter keys únicas e prefixadas', () => {
       expect(STORAGE_KEYS.PLAYER).toContain('soccer-stars');
       expect(STORAGE_KEYS.LEAGUE).toContain('soccer-stars');
+      expect(STORAGE_KEYS.SAVE_SLOTS).toContain('soccer-stars');
       expect(STORAGE_KEYS.PLAYER).not.toBe(STORAGE_KEYS.LEAGUE);
     });
   });

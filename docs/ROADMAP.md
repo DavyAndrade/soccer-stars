@@ -1,7 +1,7 @@
 # 🗺️ Soccer Stars - Roadmap de Implementação
 
 **Última Atualização**: 05/04/2026  
-**Status Atual**: Fase 2 completa (Core Logic 100%), iniciando Fase 3 (Game Engine)
+**Status Atual**: Fase 3 em andamento (Game Engine base iniciada)
 
 ---
 
@@ -10,11 +10,11 @@
 ```
 ✅ Fase 1: Fundação        100% (10/10)
 ✅ Fase 2: Core Logic      100% (8/8)
-🚧 Fase 3: Game Engine       0% (0/6)
+🚧 Fase 3: Game Engine      50% (3/6)
 🚧 Fase 4: UI/UX             0% (0/3)
 📋 Fase 5: Polish            0% (0/2)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   Total                   62% (18/29)
+   Total                   72% (21/29)
 ```
 
 ---

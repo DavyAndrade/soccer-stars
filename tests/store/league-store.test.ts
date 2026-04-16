@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useLeagueStore, selectClassificacao, selectProximaPartida } from '@/store/league-store';
 
+type InicializarLigaTimes = Parameters<ReturnType<typeof useLeagueStore.getState>['inicializarLiga']>[0];
+
 describe('league-store', () => {
   beforeEach(() => {
     // Limpar store antes de cada teste
@@ -33,7 +35,7 @@ describe('league-store', () => {
       ];
 
       act(() => {
-        result.current.inicializarLiga(times as any, 1);
+        result.current.inicializarLiga(times as unknown as InicializarLigaTimes, 1);
       });
 
       expect(result.current.times).toHaveLength(3);
@@ -59,7 +61,7 @@ describe('league-store', () => {
       ];
 
       act(() => {
-        result.current.inicializarLiga(times as any, 2);
+        result.current.inicializarLiga(times as unknown as InicializarLigaTimes, 2);
       });
 
       expect(result.current.timeProtagonista).toBe(2);
@@ -75,7 +77,7 @@ describe('league-store', () => {
         { id: 3, nome: 'Time C', formacao: '3-5-2' },
       ];
       act(() => {
-        result.current.inicializarLiga(times as any, 1);
+        result.current.inicializarLiga(times as unknown as InicializarLigaTimes, 1);
       });
     });
 
@@ -231,7 +233,7 @@ describe('league-store', () => {
       ];
 
       act(() => {
-        result.current.inicializarLiga(times as any, 1);
+        result.current.inicializarLiga(times as unknown as InicializarLigaTimes, 1);
         result.current.registrarResultado({
           rodada: 1,
           timeCasaId: 1,
@@ -259,7 +261,7 @@ describe('league-store', () => {
         { id: 3, nome: 'Time C', formacao: '3-5-2' },
       ];
       act(() => {
-        result.current.inicializarLiga(times as any, 1);
+        result.current.inicializarLiga(times as unknown as InicializarLigaTimes, 1);
       });
     });
 
@@ -366,7 +368,7 @@ describe('league-store', () => {
       ];
 
       act(() => {
-        result.current.inicializarLiga(times as any, 1);
+        result.current.inicializarLiga(times as unknown as InicializarLigaTimes, 1);
       });
 
       // Mock: próxima partida será contra Time B

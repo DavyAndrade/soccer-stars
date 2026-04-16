@@ -1,5 +1,8 @@
-import type { ZonaCampo, AcaoOfensiva, PeriodoPartida } from '@/types/match';
+import type { ZonaCampo } from '@/types/match';
 import type { PlayerAttributes } from '@/types/player';
+
+type AcaoOfensiva = 'chute' | 'drible' | 'passe';
+type PeriodoPartida = 'primeiro_tempo' | 'intervalo' | 'segundo_tempo' | 'finalizado';
 
 /**
  * Contexto da partida para tomada de decisão da IA

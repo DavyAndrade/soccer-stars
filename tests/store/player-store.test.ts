@@ -200,6 +200,8 @@ describe('player-store (novo sistema - 3 atributos)', () => {
         result.current.setAtributos({ potencia: 3, rapidez: 3, tecnica: 3 });
         result.current.setTime('Esperion');
         result.current.setNumeroCamisa(10);
+        result.current.setNacionalidade('Japão');
+        result.current.setIdade(16);
       });
 
       expect(selectIsComplete(result.current)).toBe(false);
@@ -214,6 +216,8 @@ describe('player-store (novo sistema - 3 atributos)', () => {
         result.current.setAtributos({ potencia: 5, rapidez: 3, tecnica: 1 });
         result.current.setTime('Esperion Youth');
         result.current.setNumeroCamisa(10);
+        result.current.setNacionalidade('Japão');
+        result.current.setIdade(16);
       });
 
       expect(selectIsComplete(result.current)).toBe(true);
@@ -228,6 +232,8 @@ describe('player-store (novo sistema - 3 atributos)', () => {
         result.current.setAtributos({ potencia: 5, rapidez: 3, tecnica: 1 });
         result.current.setTime('Esperion');
         result.current.setNumeroCamisa(10);
+        result.current.setNacionalidade('Japão');
+        result.current.setIdade(16);
         // Sem setAvatar
       });
 
@@ -243,6 +249,8 @@ describe('player-store (novo sistema - 3 atributos)', () => {
         result.current.setAtributos({ potencia: 3, rapidez: 2, tecnica: 4 });
         result.current.setTime('Esperion');
         result.current.setNumeroCamisa(1);
+        result.current.setNacionalidade('Japão');
+        result.current.setIdade(16);
       });
 
       expect(selectIsComplete(result.current)).toBe(true);

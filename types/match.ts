@@ -7,6 +7,13 @@ export type ZonaCampo = 'DF1' | 'MI1' | 'MC' | 'MI2' | 'DF2';
 export type AcaoOfensiva = 'CHUTE' | 'DRIBLE' | 'PASSE';
 export type AcaoDefensiva = 'BLOQUEIO' | 'DESARME' | 'INTERCEPTACAO';
 export type AcaoGoleiro = 'CAPTURA' | 'ESPALME';
+export type PeriodoPartida = 'primeiro_tempo' | 'intervalo' | 'segundo_tempo' | 'finalizado';
+
+export type AcaoPartida =
+  | { tipo: 'chute'; jogadorId: number; zona: 'MI2' | 'DF2' }
+  | { tipo: 'drible'; jogadorId: number; zona: ZonaCampo }
+  | { tipo: 'passe'; jogadorId: number; destinatarioId: number; zona: ZonaCampo }
+  | { tipo: 'esperar'; jogadorId: number };
 
 export interface ResultadoConfronto {
   atacante: {

@@ -30,6 +30,8 @@ export interface Player {
   isProtagonista: boolean;
   timeId: string;
   avatarUrl?: string; // Imagem escolhida pelo jogador (protagonista)
+  nacionalidade?: string;
+  idade?: number;
 }
 
 // Goleiro agora usa mesma interface Player (atributos universais)

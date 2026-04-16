@@ -2,16 +2,23 @@
  * Tipos relacionados a times e formações
  */
 
-import type { Player, Goalkeeper, PlayerPosition } from './player';
+import type { Player } from './player';
+
+export type ConferenciaLiga = 'EAST' | 'WEST';
+
+export interface TeamSquadPlayer extends Player {
+  nacionalidade: string;
+  idade: number; // Sub-18: 15..18
+}
 
 export interface Time {
   id: string;
   nome: string;
+  conferencia?: ConferenciaLiga;
   corPrimaria: string; // Cor do uniforme (hex)
   corSecundaria: string; // Cor secundária (hex)
   escudo?: string; // URL do escudo (opcional)
-  goleiro: Goalkeeper;
-  jogadores: Player[]; // 10 jogadores de linha
+  jogadores: TeamSquadPlayer[]; // elenco completo
   formacao: Formacao;
   numerosDisponiveis: number[]; // Números de camisa disponíveis
 }

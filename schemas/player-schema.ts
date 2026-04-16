@@ -46,7 +46,6 @@ export const PlayerPositionSchema = z.enum(['GK', 'DF', 'MF', 'FW']);
  * - Formatos aceitos: PNG, JPG, JPEG, WEBP, GIF
  */
 const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_BASE64_SIZE = Math.ceil(MAX_AVATAR_SIZE * 1.37); // ~13.7MB em base64
 
 export const AvatarSchema = z.string()
   .startsWith('data:image/')
@@ -83,6 +82,17 @@ export const CreatePlayerSchema = z.object({
     .trim(),
   
   posicao: PlayerPositionSchema,
+
+  timeId: z.string().min(1, 'Time é obrigatório'),
+
+  numeroCamisa: z.number().int().min(1).max(99),
+
+  nacionalidade: z.string()
+    .min(2, 'Nacionalidade deve ter pelo menos 2 caracteres')
+    .max(40, 'Nacionalidade deve ter no máximo 40 caracteres')
+    .trim(),
+
+  idade: z.number().int().min(15, 'Idade mínima é 15').max(18, 'Idade máxima é 18'),
   
   atributos: PlayerAttributesSchema,
   

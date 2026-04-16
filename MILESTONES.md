@@ -1,6 +1,6 @@
 # 🎯 Soccer Stars - Milestones de Desenvolvimento
 
-> **Status Geral**: MVP - Core Logic Completo, UI/Game Engine Pendentes  
+> **Status Geral**: MVP - Core Logic completo, Game Engine em andamento  
 > **Última Atualização**: 05/04/2026  
 > **Runtime**: Bun (obrigatório) ⚠️ **NÃO INSTALADO** - usar npm como fallback
 
@@ -11,11 +11,11 @@
 ```
 Fase 1: Fundação        ██████████ 100% (10/10) ✅
 Fase 2: Core Logic      ██████████ 100% (8/8)  ✅
-Fase 3: Game Engine     ░░░░░░░░░░   0% (0/6)  🚧
+Fase 3: Game Engine     █████░░░░░  50% (3/6)  🚧
 Fase 4: UI/UX           ░░░░░░░░░░   0% (0/3)  🚧
 Fase 5: Polish          ░░░░░░░░░░   0% (0/2)  📋
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total:                  ████████░░  62% (18/29) 🚀
+Total:                  ███████░░░  72% (21/29) 🚀
 ```
 
 ---
@@ -102,21 +102,21 @@ Total:                  ████████░░  62% (18/29) 🚀
 
 ---
 
-## 🎮 Fase 3: Game Engine (0% - 0/6 completos)
+## 🎮 Fase 3: Game Engine (50% - 3/6 completos)
 
 ### Configuração Phaser
-- [ ] **phaser-config** - Configurar Phaser.js
+- [x] **phaser-config** - Configurar Phaser.js ✅
   - game/config.ts com settings mobile-first
   - Viewport mínimo 375px
   - Touch controls
 
-- [ ] **phaser-scenes** - Criar cenas base
+- [x] **phaser-scenes** - Criar cenas base ✅
   - MenuScene (tela inicial)
   - PartidaScene (jogo principal)
   - ResultadoScene (fim de partida)
 
 ### Entidades e Lógica
-- [ ] **campo-entity** - Renderizar campo com 5 zonas
+- [x] **campo-entity** - Renderizar campo com 5 zonas ✅
   - DF1, MI1, MC, MI2, DF2
   - Indicadores visuais de zona atual
 

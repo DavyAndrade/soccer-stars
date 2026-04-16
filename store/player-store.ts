@@ -12,6 +12,8 @@ interface PlayerState {
   avatar?: string;
   time: string | null;
   numeroCamisa: number | null;
+  nacionalidade: string | null;
+  idade: number | null;
 
   // Actions
   setNome: (nome: string) => void;
@@ -20,6 +22,8 @@ interface PlayerState {
   setAvatar: (avatar: string | undefined) => void;
   setTime: (time: string) => void;
   setNumeroCamisa: (numero: number) => void;
+  setNacionalidade: (nacionalidade: string) => void;
+  setIdade: (idade: number) => void;
   reset: () => void;
 }
 
@@ -33,7 +37,9 @@ export const selectIsComplete = (state: PlayerState): boolean => {
     state.posicao &&
     state.atributos &&
     state.time &&
-    state.numeroCamisa !== null
+    state.numeroCamisa !== null &&
+    state.nacionalidade &&
+    state.idade !== null
   );
 };
 
@@ -47,6 +53,8 @@ const initialState = {
   avatar: undefined,
   time: null,
   numeroCamisa: null,
+  nacionalidade: null,
+  idade: null,
 };
 
 /**
@@ -71,6 +79,10 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   setTime: (time) => set({ time }),
 
   setNumeroCamisa: (numero) => set({ numeroCamisa: numero }),
+
+  setNacionalidade: (nacionalidade) => set({ nacionalidade }),
+
+  setIdade: (idade) => set({ idade }),
 
   reset: () => set(initialState),
 }));
