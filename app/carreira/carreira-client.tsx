@@ -104,6 +104,35 @@ export function CarreiraClient({ slot, seasonTransitionInfo = null }: CarreiraCl
   const leagueName = getLeagueName(team?.conferencia);
   const teamPrimary = team?.corPrimaria ?? '#3f3f46';
   const nextMatch = team ? getNextCareerMatch(save, team.id) : null;
+  const stats = {
+    partidas: save.estatisticasProtagonista?.partidas ?? 0,
+    gols: save.estatisticasProtagonista?.gols ?? 0,
+    assistencias: save.estatisticasProtagonista?.assistencias ?? 0,
+    chutes: {
+      certos: save.estatisticasProtagonista?.chutes?.certos ?? 0,
+      total: save.estatisticasProtagonista?.chutes?.total ?? 0,
+    },
+    dribles: {
+      certos: save.estatisticasProtagonista?.dribles?.certos ?? 0,
+      total: save.estatisticasProtagonista?.dribles?.total ?? 0,
+    },
+    passes: {
+      certos: save.estatisticasProtagonista?.passes?.certos ?? 0,
+      total: save.estatisticasProtagonista?.passes?.total ?? 0,
+    },
+    bloqueios: {
+      certos: save.estatisticasProtagonista?.bloqueios?.certos ?? 0,
+      total: save.estatisticasProtagonista?.bloqueios?.total ?? 0,
+    },
+    desarmes: {
+      certos: save.estatisticasProtagonista?.desarmes?.certos ?? 0,
+      total: save.estatisticasProtagonista?.desarmes?.total ?? 0,
+    },
+    interceptacoes: {
+      certos: save.estatisticasProtagonista?.interceptacoes?.certos ?? 0,
+      total: save.estatisticasProtagonista?.interceptacoes?.total ?? 0,
+    },
+  };
   const surfaceStyle = {
     borderColor: hexToRgba(teamPrimary, 0.35),
     backgroundColor: 'rgba(24, 24, 27, 0.35)',
@@ -169,6 +198,21 @@ export function CarreiraClient({ slot, seasonTransitionInfo = null }: CarreiraCl
             >
               Editar Protagonista
             </Button>
+
+            <div className="mt-4 rounded-lg border border-border/70 p-3">
+              <h3 className="text-sm font-semibold">Estatísticas da Carreira</h3>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                <p><strong>Partidas:</strong> {stats.partidas}</p>
+                <p><strong>Gols:</strong> {stats.gols}</p>
+                <p><strong>Assistências:</strong> {stats.assistencias}</p>
+                <p><strong>Chutes:</strong> {stats.chutes.certos}/{stats.chutes.total}</p>
+                <p><strong>Dribles:</strong> {stats.dribles.certos}/{stats.dribles.total}</p>
+                <p><strong>Passes:</strong> {stats.passes.certos}/{stats.passes.total}</p>
+                <p><strong>Bloqueios:</strong> {stats.bloqueios.certos}/{stats.bloqueios.total}</p>
+                <p><strong>Desarmes:</strong> {stats.desarmes.certos}/{stats.desarmes.total}</p>
+                <p><strong>Interceptações:</strong> {stats.interceptacoes.certos}/{stats.interceptacoes.total}</p>
+              </div>
+            </div>
           </article>
 
           <article className="rounded-xl border p-4" style={surfaceStyle}>

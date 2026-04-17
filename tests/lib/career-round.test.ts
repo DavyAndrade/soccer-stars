@@ -102,6 +102,36 @@ describe('career round simulation', () => {
     expect(standings.every((row) => row.pj === 1)).toBe(true);
   });
 
+  it('acumula estatísticas do protagonista ao concluir rodada', () => {
+    const save = createCareerFromPlayer(playerData, 1);
+    saveCareerSlot(1, save);
+
+    const updated = finalizeCareerRound(1, 1, 0, {
+      partidas: 1,
+      gols: 1,
+      assistencias: 1,
+      chutes: { total: 3, certos: 2 },
+      dribles: { total: 4, certos: 3 },
+      passes: { total: 5, certos: 4 },
+      bloqueios: { total: 2, certos: 1 },
+      desarmes: { total: 6, certos: 4 },
+      interceptacoes: { total: 7, certos: 5 },
+    });
+
+    expect(updated).toBeTruthy();
+    if (!updated) return;
+
+    expect(updated.estatisticasProtagonista.partidas).toBe(1);
+    expect(updated.estatisticasProtagonista.gols).toBe(1);
+    expect(updated.estatisticasProtagonista.assistencias).toBe(1);
+    expect(updated.estatisticasProtagonista.chutes).toEqual({ total: 3, certos: 2 });
+    expect(updated.estatisticasProtagonista.dribles).toEqual({ total: 4, certos: 3 });
+    expect(updated.estatisticasProtagonista.passes).toEqual({ total: 5, certos: 4 });
+    expect(updated.estatisticasProtagonista.bloqueios).toEqual({ total: 2, certos: 1 });
+    expect(updated.estatisticasProtagonista.desarmes).toEqual({ total: 6, certos: 4 });
+    expect(updated.estatisticasProtagonista.interceptacoes).toEqual({ total: 7, certos: 5 });
+  });
+
   it('vira automaticamente para a próxima temporada ao concluir a rodada 22', () => {
     const save = createCareerFromPlayer(playerData, 1);
     saveCareerSlot(1, {
@@ -131,5 +161,59 @@ describe('career round simulation', () => {
     expect(westTeam?.conferencia).toBe('WEST');
     expect(final.temporada).toBe(1);
     expect([final.timeEastId, final.timeWestId]).toContain(final.campeaoId);
+  });
+
+  it('preserva protagonista e recompõe elenco para 3 GK, 8 DF, 8 MF e 8 FW após virada', () => {
+    const save = createCareerFromPlayer(playerData, 1);
+    const protagonistaTime = save.liga.times.find((time) => time.id === playerData.timeId);
+    expect(protagonistaTime).toBeTruthy();
+    if (!protagonistaTime) return;
+
+    // Força cenário de envelhecimento para validar recomposição do elenco.
+    const jogadoresEnvelhecidos = protagonistaTime.jogadores.map((jogador) => ({
+      ...jogador,
+      idade: jogador.isProtagonista ? 19 : 18,
+    }));
+
+    saveCareerSlot(1, {
+      ...save,
+      liga: {
+        ...save.liga,
+        rodadaAtual: 22,
+        times: save.liga.times.map((time) =>
+          time.id === protagonistaTime.id
+            ? {
+                ...time,
+                jogadores: jogadoresEnvelhecidos,
+              }
+            : time,
+        ),
+      },
+    });
+
+    const updated = finalizeCareerRound(1, 1, 0);
+    expect(updated).toBeTruthy();
+    if (!updated) return;
+
+    const updatedTeam = updated.liga.times.find((time) => time.id === playerData.timeId);
+    expect(updatedTeam).toBeTruthy();
+    if (!updatedTeam) return;
+
+    const counts = updatedTeam.jogadores.reduce(
+      (acc, jogador) => {
+        acc[jogador.posicao] += 1;
+        return acc;
+      },
+      { GK: 0, DF: 0, MF: 0, FW: 0 },
+    );
+
+    expect(counts.GK).toBe(3);
+    expect(counts.DF).toBe(8);
+    expect(counts.MF).toBe(8);
+    expect(counts.FW).toBe(8);
+
+    const protagonista = updatedTeam.jogadores.find((jogador) => jogador.isProtagonista);
+    expect(protagonista).toBeTruthy();
+    expect(protagonista?.nome).toBe(updated.protagonista.nome);
   });
 });

@@ -193,6 +193,87 @@ function calculateAvailableNumbers(squad: TeamSquadPlayer[]): number[] {
   return Array.from({ length: 99 }, (_, i) => i + 1).filter((n) => !used.has(n));
 }
 
+const ELENCO_ALVO_POR_POSICAO: Record<PlayerPosition, number> = {
+  GK: 3,
+  DF: 8,
+  MF: 8,
+  FW: 8,
+};
+
+function rebalanceSquadByPosition(teamId: string, jogadores: TeamSquadPlayer[]): TeamSquadPlayer[] {
+  const rng = createRng(hashString(`rebalance:${teamId}:${jogadores.length}`));
+  const usedIds = new Set(jogadores.map((player) => player.id));
+  const usedNumbers = new Set(jogadores.map((player) => player.numero));
+  const grouped: Record<PlayerPosition, TeamSquadPlayer[]> = {
+    GK: [],
+    DF: [],
+    MF: [],
+    FW: [],
+  };
+
+  jogadores.forEach((player) => {
+    grouped[player.posicao].push(player);
+  });
+
+  const selected: TeamSquadPlayer[] = [];
+  (['GK', 'DF', 'MF', 'FW'] as PlayerPosition[]).forEach((posicao) => {
+    const target = ELENCO_ALVO_POR_POSICAO[posicao];
+    const players = grouped[posicao];
+    const protagonistas = players.filter((player) => player.isProtagonista);
+    const nonProtagonistas = players
+      .filter((player) => !player.isProtagonista)
+      .sort((a, b) => a.idade - b.idade);
+
+    const kept = [...protagonistas, ...nonProtagonistas.slice(0, Math.max(0, target - protagonistas.length))];
+    selected.push(...kept);
+  });
+
+  const byPositionCount = {
+    GK: selected.filter((player) => player.posicao === 'GK').length,
+    DF: selected.filter((player) => player.posicao === 'DF').length,
+    MF: selected.filter((player) => player.posicao === 'MF').length,
+    FW: selected.filter((player) => player.posicao === 'FW').length,
+  };
+
+  const createYouthPlayer = (posicao: PlayerPosition): TeamSquadPlayer => {
+    const suffix = `${posicao.toLowerCase()}-${Math.floor(rng() * 1_000_000)}`;
+    let id = `${teamId}-${suffix}`;
+    while (usedIds.has(id)) {
+      id = `${teamId}-${posicao.toLowerCase()}-${Math.floor(rng() * 1_000_000)}`;
+    }
+    usedIds.add(id);
+
+    const numberPool = Array.from({ length: 99 }, (_, i) => i + 1).filter((num) => !usedNumbers.has(num));
+    const numero = pick(rng, numberPool.length > 0 ? numberPool : [99]);
+    usedNumbers.add(numero);
+
+    return {
+      id,
+      nome: `${pick(rng, FIRST_NAMES)} ${pick(rng, LAST_NAMES)}`,
+      numero,
+      posicao,
+      atributos: randomAtributos(rng),
+      energia: 10,
+      energiaMaxima: 10,
+      isProtagonista: false,
+      timeId: teamId,
+      nacionalidade: pick(rng, NACIONALIDADES),
+      idade: 15 + Math.floor(rng() * 3),
+      titular: false,
+    };
+  };
+
+  (['GK', 'DF', 'MF', 'FW'] as PlayerPosition[]).forEach((posicao) => {
+    const target = ELENCO_ALVO_POR_POSICAO[posicao];
+    while (byPositionCount[posicao] < target) {
+      selected.push(createYouthPlayer(posicao));
+      byPositionCount[posicao] += 1;
+    }
+  });
+
+  return selected;
+}
+
 export function getInitialTeams(): Time[] {
   return TEAM_SEEDS.map((seed) => {
     const formacaoNome = pickInitialFormation(seed.id);
@@ -211,12 +292,10 @@ export function getInitialTeams(): Time[] {
 
 export function advanceSeasonAges(times: Time[]): Time[] {
   return times.map((team) => {
-    const jogadoresAtualizados = applyFormationToSquad(
-      team.jogadores
-        .map((player) => ({ ...player, idade: player.idade + 1 }))
-        .filter((player) => player.idade <= 18),
-      team.formacao.nome
-    );
+    const agedPlayers = team.jogadores.map((player) => ({ ...player, idade: player.idade + 1 }));
+    const retained = agedPlayers.filter((player) => player.isProtagonista || player.idade <= 18);
+    const rebalanced = rebalanceSquadByPosition(team.id, retained);
+    const jogadoresAtualizados = applyFormationToSquad(rebalanced, team.formacao.nome);
 
     return {
       ...team,

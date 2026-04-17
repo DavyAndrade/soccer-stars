@@ -29,6 +29,33 @@ type PlayerData = z.infer<typeof CreatePlayerSchema>;
 type LeagueData = z.infer<typeof LeagueDataSchema>;
 type SaveSlotId = 1 | 2 | 3;
 
+const AccuracyStatSchema = z.object({
+  total: z.number().int().min(0).default(0),
+  certos: z.number().int().min(0).default(0),
+});
+
+const ProtagonistStatsSchema = z.object({
+  partidas: z.number().int().min(0).default(0),
+  gols: z.number().int().min(0).default(0),
+  assistencias: z.number().int().min(0).default(0),
+  chutes: AccuracyStatSchema.default({ total: 0, certos: 0 }),
+  dribles: AccuracyStatSchema.default({ total: 0, certos: 0 }),
+  passes: AccuracyStatSchema.default({ total: 0, certos: 0 }),
+  bloqueios: AccuracyStatSchema.default({ total: 0, certos: 0 }),
+  desarmes: AccuracyStatSchema.default({ total: 0, certos: 0 }),
+  interceptacoes: AccuracyStatSchema.default({ total: 0, certos: 0 }),
+}).default({
+  partidas: 0,
+  gols: 0,
+  assistencias: 0,
+  chutes: { total: 0, certos: 0 },
+  dribles: { total: 0, certos: 0 },
+  passes: { total: 0, certos: 0 },
+  bloqueios: { total: 0, certos: 0 },
+  desarmes: { total: 0, certos: 0 },
+  interceptacoes: { total: 0, certos: 0 },
+});
+
 const CareerSaveSchema = z.object({
   slotId: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   createdAt: z.string(),
@@ -53,12 +80,13 @@ const CareerSaveSchema = z.object({
       temporada: z.number().int().min(1),
       timeEastId: z.string(),
       timeWestId: z.string(),
-      golsEast: z.number().int().min(0).max(99),
-      golsWest: z.number().int().min(0).max(99),
+      golsEast: z.number().int().min(0).max(99).default(0),
+      golsWest: z.number().int().min(0).max(99).default(0),
       campeaoId: z.string(),
       decididoNosPenaltis: z.boolean().default(false),
     }),
   ).default([]),
+  estatisticasProtagonista: ProtagonistStatsSchema,
 });
 
 const SaveSlotsSchema = z.object({
@@ -69,6 +97,19 @@ export type CareerSave = z.infer<typeof CareerSaveSchema>;
 export type SaveSlotsState = z.infer<typeof SaveSlotsSchema>;
 export type CareerMatchResult = CareerSave['liga']['resultados'][number];
 export type CareerSeasonFinal = CareerSave['historicoFinais'][number];
+export type AccuracyStat = z.infer<typeof AccuracyStatSchema>;
+export type ProtagonistStats = z.infer<typeof ProtagonistStatsSchema>;
+export type ProtagonistStatsDelta = Partial<{
+  partidas: number;
+  gols: number;
+  assistencias: number;
+  chutes: Partial<AccuracyStat>;
+  dribles: Partial<AccuracyStat>;
+  passes: Partial<AccuracyStat>;
+  bloqueios: Partial<AccuracyStat>;
+  desarmes: Partial<AccuracyStat>;
+  interceptacoes: Partial<AccuracyStat>;
+}>;
 export type CareerRoundFixture = {
   rodada: number;
   conferencia: ConferenciaLiga;
@@ -81,6 +122,68 @@ type CareerLigaState = {
   rodadaAtual: number;
   resultados: CareerMatchResult[];
 };
+
+export function getEmptyProtagonistStats(): ProtagonistStats {
+  return {
+    partidas: 0,
+    gols: 0,
+    assistencias: 0,
+    chutes: { total: 0, certos: 0 },
+    dribles: { total: 0, certos: 0 },
+    passes: { total: 0, certos: 0 },
+    bloqueios: { total: 0, certos: 0 },
+    desarmes: { total: 0, certos: 0 },
+    interceptacoes: { total: 0, certos: 0 },
+  };
+}
+
+function mergeAccuracyStat(current: AccuracyStat | undefined, delta: Partial<AccuracyStat> | undefined): AccuracyStat {
+  return {
+    total: Math.max(0, (current?.total ?? 0) + (delta?.total ?? 0)),
+    certos: Math.max(0, (current?.certos ?? 0) + (delta?.certos ?? 0)),
+  };
+}
+
+function normalizeAccuracyStat(stat: Partial<AccuracyStat> | undefined): AccuracyStat {
+  return {
+    total: Math.max(0, stat?.total ?? 0),
+    certos: Math.max(0, stat?.certos ?? 0),
+  };
+}
+
+function normalizeProtagonistStats(stats: Partial<ProtagonistStats> | undefined): ProtagonistStats {
+  const base = getEmptyProtagonistStats();
+  return {
+    partidas: Math.max(0, stats?.partidas ?? base.partidas),
+    gols: Math.max(0, stats?.gols ?? base.gols),
+    assistencias: Math.max(0, stats?.assistencias ?? base.assistencias),
+    chutes: normalizeAccuracyStat(stats?.chutes),
+    dribles: normalizeAccuracyStat(stats?.dribles),
+    passes: normalizeAccuracyStat(stats?.passes),
+    bloqueios: normalizeAccuracyStat(stats?.bloqueios),
+    desarmes: normalizeAccuracyStat(stats?.desarmes),
+    interceptacoes: normalizeAccuracyStat(stats?.interceptacoes),
+  };
+}
+
+function mergeProtagonistStats(
+  current: ProtagonistStats | undefined,
+  delta: ProtagonistStatsDelta | undefined,
+): ProtagonistStats {
+  const base = normalizeProtagonistStats(current);
+  if (!delta) return base;
+  return {
+    partidas: Math.max(0, base.partidas + (delta.partidas ?? 0)),
+    gols: Math.max(0, base.gols + (delta.gols ?? 0)),
+    assistencias: Math.max(0, base.assistencias + (delta.assistencias ?? 0)),
+    chutes: mergeAccuracyStat(base.chutes, delta.chutes),
+    dribles: mergeAccuracyStat(base.dribles, delta.dribles),
+    passes: mergeAccuracyStat(base.passes, delta.passes),
+    bloqueios: mergeAccuracyStat(base.bloqueios, delta.bloqueios),
+    desarmes: mergeAccuracyStat(base.desarmes, delta.desarmes),
+    interceptacoes: mergeAccuracyStat(base.interceptacoes, delta.interceptacoes),
+  };
+}
 
 export type ConferenceStanding = {
   time: Time;
@@ -112,6 +215,63 @@ function getBrowserStorage(): Storage | null {
 function calculateAvailableNumbers(squad: TeamSquadPlayer[]): number[] {
   const used = new Set(squad.map((player) => player.numero));
   return Array.from({ length: 99 }, (_, i) => i + 1).filter((n) => !used.has(n));
+}
+
+function toLegacyNumber(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) {
+    return parsed;
+  }
+  return fallback;
+}
+
+function migrateLegacySaveSlots(parsed: unknown): unknown {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  const record = parsed as { slots?: unknown };
+  if (!Array.isArray(record.slots)) return parsed;
+
+  return {
+    ...record,
+    slots: record.slots.map((slot) => {
+      if (!slot || typeof slot !== 'object') return slot;
+      const save = slot as Record<string, unknown>;
+      const season = Math.max(1, toLegacyNumber(save.temporadaAtual, 1));
+      const rawFinais = Array.isArray(save.historicoFinais) ? save.historicoFinais : [];
+
+      const historicoFinais = rawFinais.map((entry) => {
+        if (!entry || typeof entry !== 'object') return entry;
+        const final = entry as Record<string, unknown>;
+        const timeEastId = String(final.timeEastId ?? final.timeCasaId ?? '');
+        const timeWestId = String(final.timeWestId ?? final.timeVisitanteId ?? '');
+        const golsEast = toLegacyNumber(final.golsEast ?? final.golsCasa, 0);
+        const golsWest = toLegacyNumber(final.golsWest ?? final.golsVisitante, 0);
+        const campeaoId =
+          typeof final.campeaoId === 'string' && final.campeaoId.length > 0
+            ? final.campeaoId
+            : golsEast > golsWest
+              ? timeEastId
+              : golsWest > golsEast
+                ? timeWestId
+                : timeEastId || timeWestId;
+
+        return {
+          ...final,
+          temporada: Math.max(1, toLegacyNumber(final.temporada, season - 1)),
+          timeEastId,
+          timeWestId,
+          golsEast,
+          golsWest,
+          campeaoId,
+          decididoNosPenaltis: Boolean(final.decididoNosPenaltis ?? false),
+        };
+      });
+
+      return {
+        ...save,
+        historicoFinais,
+      };
+    }),
+  };
 }
 
 function normalizeLigaState(liga: CareerSave['liga']): CareerLigaState {
@@ -260,6 +420,7 @@ export function registerCareerMatchResult(
   slotId: SaveSlotId,
   goalsFor: number,
   goalsAgainst: number,
+  statsDelta?: ProtagonistStatsDelta,
 ): CareerSave | null {
   const current = loadCareerSlot(slotId);
   if (!current) return null;
@@ -280,6 +441,7 @@ export function registerCareerMatchResult(
   const updated: CareerSave = {
     ...current,
     updatedAt: new Date().toISOString(),
+    estatisticasProtagonista: mergeProtagonistStats(current.estatisticasProtagonista, statsDelta),
     liga: {
       ...liga,
       resultados: [...liga.resultados, result],
@@ -349,6 +511,7 @@ export function finalizeCareerRound(
   slotId: SaveSlotId,
   protagonistGoals: number,
   opponentGoals: number,
+  statsDelta?: ProtagonistStatsDelta,
 ): CareerSave | null {
   const current = loadCareerSlot(slotId);
   if (!current) return null;
@@ -394,6 +557,7 @@ export function finalizeCareerRound(
   const updated: CareerSave = {
     ...current,
     updatedAt: new Date().toISOString(),
+    estatisticasProtagonista: mergeProtagonistStats(current.estatisticasProtagonista, statsDelta),
     liga: {
       ...liga,
       resultados: [...liga.resultados, ...roundResults],
@@ -498,11 +662,15 @@ function syncProtagonista(times: Time[], protagonista: PlayerData, slotId: SaveS
     const reservaMesmoCargo = semConflito.find(
       (jogador) => jogador.posicao === protagonista.posicao && !jogador.titular
     );
-    const substitutoId = reservaMesmoCargo?.id ?? semConflito.find((jogador) => !jogador.titular)?.id;
+    const substitutoId =
+      reservaMesmoCargo?.id ??
+      semConflito.find((jogador) => !jogador.titular)?.id ??
+      semConflito.find((jogador) => jogador.posicao === protagonista.posicao)?.id ??
+      semConflito[0]?.id;
 
     const baseSquad = substitutoId
       ? semConflito.filter((jogador) => jogador.id !== substitutoId)
-      : semConflito.slice(0, Math.max(0, semConflito.length - 1));
+      : semConflito;
 
     const jogadoresAtualizados = applyFormationToSquad([...baseSquad, protagonistaJogador], time.formacao.nome);
     return {
@@ -644,12 +812,40 @@ export function loadSaveSlots(): SaveSlotsState {
     }
 
     const parsed = JSON.parse(raw);
-    const result = SaveSlotsSchema.safeParse(parsed);
-    if (!result.success) {
-      console.error('[Storage] Save slots inválidos:', result.error);
+    const migrated = migrateLegacySaveSlots(parsed) as { slots?: unknown };
+    if (!Array.isArray(migrated?.slots)) {
+      console.error('[Storage] Save slots inválidos: formato de slots ausente.');
       return { slots: [null, null, null] };
     }
-    return result.data;
+
+    const normalizedSlots: Array<CareerSave | null> = [null, null, null];
+
+    for (let i = 0; i < 3; i += 1) {
+      const slot = migrated.slots[i];
+      if (slot == null) {
+        normalizedSlots[i] = null;
+        continue;
+      }
+
+      const parsedSlot = CareerSaveSchema.safeParse(slot);
+      if (!parsedSlot.success) {
+        console.error(`[Storage] Slot ${i + 1} inválido e será ignorado:`, parsedSlot.error);
+        normalizedSlots[i] = null;
+        continue;
+      }
+
+      normalizedSlots[i] = parsedSlot.data;
+    }
+
+    const normalizedState: SaveSlotsState = {
+      slots: [normalizedSlots[0], normalizedSlots[1], normalizedSlots[2]],
+    };
+
+    if (JSON.stringify(parsed) !== JSON.stringify(normalizedState)) {
+      saveSaveSlots(normalizedState);
+    }
+
+    return normalizedState;
   } catch (error) {
     console.error('[Storage] Erro ao carregar save slots:', error);
     return { slots: [null, null, null] };
@@ -682,6 +878,8 @@ export function loadCareerSlot(slotId: SaveSlotId): CareerSave | null {
   const save = current.slots[slotId - 1];
   if (!save) return null;
 
+  const normalizedStats = normalizeProtagonistStats(save.estatisticasProtagonista);
+
   const normalizedTimes = (save.liga.times as Time[]).map((time) => {
     const titularesCount = time.jogadores.filter((jogador) => jogador.titular).length;
     const jogadores =
@@ -701,7 +899,7 @@ export function loadCareerSlot(slotId: SaveSlotId): CareerSave | null {
       JSON.stringify(previous?.jogadores) !== JSON.stringify(time.jogadores) ||
       JSON.stringify(previous?.numerosDisponiveis) !== JSON.stringify(time.numerosDisponiveis)
     );
-  });
+  }) || JSON.stringify(save.estatisticasProtagonista) !== JSON.stringify(normalizedStats);
 
   if (!needsUpdate) {
     return save;
@@ -710,6 +908,7 @@ export function loadCareerSlot(slotId: SaveSlotId): CareerSave | null {
   const normalized: CareerSave = {
     ...save,
     updatedAt: new Date().toISOString(),
+    estatisticasProtagonista: normalizedStats,
     liga: {
       ...save.liga,
       times: normalizedTimes,
@@ -736,6 +935,7 @@ export function createCareerFromPlayer(player: PlayerData, slotId: SaveSlotId): 
     protagonista: player,
     liga: { times: teams, rodadaAtual: 1, resultados: [] },
     historicoFinais: [],
+    estatisticasProtagonista: getEmptyProtagonistStats(),
   };
 }
 

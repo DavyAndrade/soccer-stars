@@ -350,7 +350,12 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
                         key={jogador.id}
                         className="flex items-center justify-between rounded-md border border-border px-2 py-1.5 text-sm"
                       >
-                        <span>#{jogador.numero} {jogador.nome}</span>
+                        <div>
+                          <span>#{jogador.numero} {jogador.nome}</span>
+                          <p className="text-[11px] text-muted-foreground/90">
+                            POT {jogador.atributos.potencia} • RAP {jogador.atributos.rapidez} • TEC {jogador.atributos.tecnica}
+                          </p>
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {jogador.titular ? 'Titular' : 'Reserva'}
                         </span>
@@ -400,6 +405,9 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
                       style={selectedForSwap?.id === jogador.id ? { borderColor: teamPrimary, backgroundColor: hexToRgba(teamPrimary, 0.2) } : undefined}
                     >
                       #{jogador.numero} {jogador.nome}
+                      <span className="ml-1 text-[10px] text-white/80">
+                        ({jogador.atributos.potencia}/{jogador.atributos.rapidez}/{jogador.atributos.tecnica})
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -413,6 +421,9 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
                     style={selectedForSwap?.id === field.goleiro.id ? { borderColor: teamPrimary, backgroundColor: hexToRgba(teamPrimary, 0.2) } : undefined}
                   >
                     #{field.goleiro.numero} {field.goleiro.nome}
+                    <span className="ml-1 text-[10px] text-white/80">
+                      ({field.goleiro.atributos.potencia}/{field.goleiro.atributos.rapidez}/{field.goleiro.atributos.tecnica})
+                    </span>
                   </button>
                 ) : (
                   <div className="text-xs text-white/70">Sem GK titular</div>
@@ -432,7 +443,12 @@ export function CarreiraTimeClient({ slot }: CarreiraTimeClientProps) {
                   className="flex w-full items-center justify-between rounded-md border border-border px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/40"
                   style={selectedForSwap?.id === jogador.id ? { borderColor: teamPrimary, backgroundColor: hexToRgba(teamPrimary, 0.16) } : undefined}
                 >
-                  <span>#{jogador.numero} {jogador.nome} ({jogador.posicao})</span>
+                  <div>
+                    <span>#{jogador.numero} {jogador.nome} ({jogador.posicao})</span>
+                    <p className="text-[11px] text-muted-foreground/90">
+                      POT {jogador.atributos.potencia} • RAP {jogador.atributos.rapidez} • TEC {jogador.atributos.tecnica}
+                    </p>
+                  </div>
                   <span className="text-xs text-muted-foreground">Reserva</span>
                 </button>
               ))}
