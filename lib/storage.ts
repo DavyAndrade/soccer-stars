@@ -123,6 +123,11 @@ type CareerLigaState = {
   resultados: CareerMatchResult[];
 };
 
+type FinalScore = {
+  golsEast: number;
+  golsWest: number;
+};
+
 export function getEmptyProtagonistStats(): ProtagonistStats {
   return {
     partidas: 0,
@@ -493,6 +498,13 @@ function simulateFixtureScore(timeCasa: Time, timeVisitante: Time): { golsCasa: 
   };
 }
 
+function toFinalScoreFromFixtureScore(score: { golsCasa: number; golsVisitante: number }): FinalScore {
+  return {
+    golsEast: score.golsCasa,
+    golsWest: score.golsVisitante,
+  };
+}
+
 function hasRoundResult(
   resultados: CareerMatchResult[],
   rodada: number,
@@ -591,7 +603,7 @@ function registerSeasonFinal(save: CareerSave): CareerSave {
     return save;
   }
 
-  const score = simulateFixtureScore(eastChampion, westChampion);
+  const score = toFinalScoreFromFixtureScore(simulateFixtureScore(eastChampion, westChampion));
   let campeaoId = eastChampion.id;
   let decididoNosPenaltis = false;
 
